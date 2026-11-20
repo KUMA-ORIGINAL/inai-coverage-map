@@ -1,0 +1,169 @@
+"""Сквозной расчёт: файлы → очистка → сетка → выбор площадок → result.json, details.json, карта."""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from pathlib import Path
+
+import pandas as pd
+
+from .clean import CleaningReport, clean_measurements, clean_points
+from .config import Config
+from .grid import RED, GridSpec, aggregate_cells, split_day_night, worst_cells
+from .loader import read_measurements, read_points
+from .placement import PairResult, best_pair_bruteforce, coverage_sets, evaluate_candidates, greedy_pair
+
+
+@dataclass(frozen=True)
+class InputPaths:
+    measurements: Path
+    towers: Path
+    candidates: Path
+
+    @classmethod
+    def from_dir(cls, data_dir: str | Path) -> "InputPaths":
+        data_dir = Path(data_dir)
+        return cls(data_dir / "measurements.csv", data_dir / "towers.csv", data_dir / "candidates.csv")
+
+
+@dataclass
+class Analysis:
+    cfg: Config
+    spec: GridSpec
+    report: CleaningReport
+    measurements: pd.DataFrame
+    towers: pd.DataFrame
+    candidates: pd.DataFrame  # с колонками nearest_tower, nearest_tower_m, allowed
+    cells: pd.DataFrame
+    worst: pd.DataFrame
+    red_cells: pd.DataFrame
+    coverage: dict[str, frozenset[str]]
+    best: PairResult
+    greedy: PairResult
+    day_cells: pd.DataFrame
+    night_cells: pd.DataFrame
+    towers_dropped: int
+    candidates_dropped: int
+
+
+def analyze(paths: InputPaths, cfg: Config) -> Analysis:
+    measurements, report = clean_measurements(read_measurements(paths.measurements), cfg)
+    towers, towers_dropped = clean_points(read_points(paths.towers))
+    candidates, candidates_dropped = clean_points(read_points(paths.candidates))
+
+    spec = GridSpec.from_bounds(cfg.bounds, cfg.cell_size_m)
+    cells = aggregate_cells(measurements, spec, cfg)
+    red_cells = cells[cells["color"] == RED]
+
+    candidates = evaluate_candidates(candidates, towers, cfg)
+    allowed = candidates[candidates["allowed"]]
+    coverage = coverage_sets(allowed, red_cells, cfg.coverage_radius_m)
+
+    day, night = split_day_night(measurements, cfg)
+
+    return Analysis(
+        cfg=cfg,
+        spec=spec,
+        report=report,
+        measurements=measurements,
+        towers=towers,
+        candidates=candidates,
+        cells=cells,
+        worst=worst_cells(cells, cfg.worst_count),
+        red_cells=red_cells,
+        coverage=coverage,
+        best=best_pair_bruteforce(coverage),
+        greedy=greedy_pair(coverage),
+        day_cells=aggregate_cells(day, spec, cfg),
+        night_cells=aggregate_cells(night, spec, cfg),
+        towers_dropped=towers_dropped,
+        candidates_dropped=candidates_dropped,
+    )
+
+
+def build_result(a: Analysis) -> dict:
+    """Ровно формат из ТЗ — его сверяет автопроверка."""
+    return {
+        "worst_cells": a.worst["cell_id"].tolist(),
+        "best_candidates": list(a.best.candidates),
+        "dropped_rows": a.report.dropped,
+        "covered_weak_cells": a.best.covered_count,
+    }
+
+
+def _color_counts(cells: pd.DataFrame) -> dict[str, int]:
+    counts = cells["color"].value_counts()
+    return {c: int(counts.get(c, 0)) for c in ("green", "yellow", "red")}
+
+
+def _pair_dict(p: PairResult) -> dict:
+    return {
+        "candidates": list(p.candidates),
+        "covered_weak_cells": p.covered_count,
+        "evaluated": p.pairs_evaluated,
+    }
+
+
+def build_details(a: Analysis) -> dict:
+    """Всё, что нужно для демо и разбора: причины отбраковки, сравнение алгоритмов, день/ночь."""
+    red_total = len(a.red_cells)
+    covered = a.best.covered_count
+    return {
+        "cleaning": a.report.as_dict(),
+        "towers": {"count": len(a.towers), "dropped": a.towers_dropped},
+        "candidates": {
+            "count": len(a.candidates),
+            "dropped": a.candidates_dropped,
+            "rejected_near_tower": [
+                {"id": r.id, "nearest_tower": r.nearest_tower, "distance_m": round(float(r.nearest_tower_m), 1)}
+                for r in a.candidates[~a.candidates["allowed"]].itertuples()
+            ],
+            "coverage": {cid: len(cells) for cid, cells in a.coverage.items()},
+        },
+        "grid": {
+            "cell_size_m": a.cfg.cell_size_m,
+            "origin": {"lat": a.spec.origin_lat, "lon": a.spec.origin_lon},
+            "cells": len(a.cells),
+            "colors": _color_counts(a.cells),
+        },
+        "worst_cells": [
+            {
+                "cell_id": r.cell_id,
+                "median_rsrp": float(r.median),
+                "count": int(r.count),
+                "center": [round(float(r.center_lat), 6), round(float(r.center_lon), 6)],
+            }
+            for r in a.worst.itertuples()
+        ],
+        "selection": {
+            "bruteforce": {**_pair_dict(a.best), "tied_pairs": [list(t) for t in a.best.tied_with]},
+            "greedy": _pair_dict(a.greedy),
+            "greedy_is_optimal": a.greedy.covered_count == a.best.covered_count,
+            "weak_cells_before": red_total,
+            "weak_cells_after": red_total - covered,
+            "weak_cells_reduction_pct": round(100 * covered / red_total, 1) if red_total else 0.0,
+        },
+        "day_night": {
+            "day_hours": list(a.cfg.day_hours),
+            "day": _color_counts(a.day_cells),
+            "night": _color_counts(a.night_cells),
+        },
+    }
+
+
+def write_outputs(a: Analysis, out_dir: str | Path, make_map: bool = True) -> dict[str, Path]:
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    written = {
+        "result": out_dir / "result.json",
+        "details": out_dir / "details.json",
+    }
+    written["result"].write_text(json.dumps(build_result(a), ensure_ascii=False, indent=2), encoding="utf-8")
+    written["details"].write_text(json.dumps(build_details(a), ensure_ascii=False, indent=2), encoding="utf-8")
+    if make_map:
+        from .viz import build_map  # folium нужен только для карты
+
+        written["map"] = out_dir / "coverage_map.html"
+        build_map(a, build_details(a)).save(str(written["map"]))
+    return written

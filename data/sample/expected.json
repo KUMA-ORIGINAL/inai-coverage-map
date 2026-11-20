@@ -1,0 +1,9 @@
+{
+  "total_rows": 5000,
+  "dropped_rows": 180,
+  "duplicates": 80,
+  "rsrp_out_of_range": 40,
+  "out_of_bounds": 30,
+  "invalid_values": 30,
+  "bad_timestamp_kept": 5
+}
