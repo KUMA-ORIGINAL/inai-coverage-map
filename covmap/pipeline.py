@@ -10,7 +10,7 @@ import pandas as pd
 
 from .clean import CleaningReport, clean_measurements, clean_points
 from .config import Config
-from .grid import RED, GridSpec, aggregate_cells, split_day_night, worst_cells
+from .grid import RED, GridSpec, aggregate_cells, sparse_cell_count, split_day_night, worst_cells
 from .loader import read_measurements, read_points
 from .placement import PairResult, best_pair_bruteforce, coverage_sets, evaluate_candidates, greedy_pair
 from .viz import render_map_html
@@ -46,6 +46,7 @@ class Analysis:
     night_cells: pd.DataFrame
     towers_dropped: int
     candidates_dropped: int
+    sparse_cells: int = 0  # квадраты, где меньше min_measurements замеров
 
 
 def analyze(paths: InputPaths, cfg: Config) -> Analysis:
@@ -80,6 +81,7 @@ def analyze(paths: InputPaths, cfg: Config) -> Analysis:
         night_cells=aggregate_cells(night, spec, cfg),
         towers_dropped=towers_dropped,
         candidates_dropped=candidates_dropped,
+        sparse_cells=sparse_cell_count(measurements, spec, cfg),
     )
 
 
@@ -106,6 +108,13 @@ def _pair_dict(p: PairResult) -> dict:
     }
 
 
+def day_night_changes(a: Analysis) -> int:
+    """Сколько квадратов (есть и днём, и ночью) меняют цвет между днём и ночью."""
+    merged = a.day_cells[["cell_id", "color"]].merge(a.night_cells[["cell_id", "color"]], on="cell_id",
+                                                      suffixes=("_day", "_night"))
+    return int((merged["color_day"] != merged["color_night"]).sum())
+
+
 def build_details(a: Analysis) -> dict:
     """Всё, что нужно для демо и разбора: причины отбраковки, сравнение алгоритмов, день/ночь."""
     red_total = len(a.red_cells)
@@ -126,6 +135,7 @@ def build_details(a: Analysis) -> dict:
             "cell_size_m": a.cfg.cell_size_m,
             "origin": {"lat": a.spec.origin_lat, "lon": a.spec.origin_lon},
             "cells": len(a.cells),
+            "cells_too_sparse": a.sparse_cells,
             "colors": _color_counts(a.cells),
         },
         "worst_cells": [
@@ -149,6 +159,7 @@ def build_details(a: Analysis) -> dict:
             "day_hours": list(a.cfg.day_hours),
             "day": _color_counts(a.day_cells),
             "night": _color_counts(a.night_cells),
+            "cells_changed_class": day_night_changes(a),
         },
     }
 
@@ -159,11 +170,22 @@ def write_outputs(a: Analysis, out_dir: str | Path, make_map: bool = True) -> di
     written = {
         "result": out_dir / "result.json",
         "details": out_dir / "details.json",
+        "dropped": out_dir / "dropped_rows.csv",
     }
     details = build_details(a)
     written["result"].write_text(json.dumps(build_result(a), ensure_ascii=False, indent=2), encoding="utf-8")
     written["details"].write_text(json.dumps(details, ensure_ascii=False, indent=2), encoding="utf-8")
+    # utf-8-sig — чтобы Excel сразу открыл кириллицу в причинах.
+    a.report.rejected.to_csv(written["dropped"], index=False, encoding="utf-8-sig")
     if make_map:
         written["map"] = out_dir / "coverage_map.html"
         written["map"].write_text(render_map_html(a, details), encoding="utf-8")
+        # Отдельная точка входа сразу в режим тура: браузеры теряют #якорь у file:// при открытии из ОС.
+        written["tour"] = out_dir / "tour.html"
+        written["tour"].write_text(
+            '<!doctype html><meta charset="utf-8"><title>Тур по расчёту</title>'
+            '<script>location.replace("coverage_map.html#tour")</script>'
+            '<a href="coverage_map.html#tour">Открыть тур</a>',
+            encoding="utf-8",
+        )
     return written

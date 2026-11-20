@@ -90,6 +90,15 @@ def aggregate_cells(measurements: pd.DataFrame, spec: GridSpec, cfg: Config) -> 
     return cells[columns].sort_values(["row", "col"]).reset_index(drop=True)
 
 
+def sparse_cell_count(measurements: pd.DataFrame, spec: GridSpec, cfg: Config) -> int:
+    """Сколько квадратов отброшено, потому что в них меньше min_measurements замеров."""
+    if measurements.empty:
+        return 0
+    row, col = spec.index(measurements["lat"], measurements["lon"])
+    counts = pd.DataFrame({"row": row, "col": col}).value_counts()
+    return int((counts < cfg.min_measurements).sum())
+
+
 def worst_cells(cells: pd.DataFrame, n: int) -> pd.DataFrame:
     """N квадратов с минимальной медианой. При равенстве — где больше замеров, затем по id."""
     return cells.sort_values(["median", "count", "cell_id"], ascending=[True, False, True]).head(n)

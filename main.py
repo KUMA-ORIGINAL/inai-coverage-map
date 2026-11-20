@@ -3,6 +3,7 @@
     python main.py                      # данные из папки data/
     python main.py путь/к/данным        # любая папка с measurements.csv, towers.csv, candidates.csv
     python main.py путь/к/данным --open # и сразу открыть карту в браузере
+    python main.py путь/к/данным --tour # открыть карту в режиме тура по ТЗ (для демо)
 """
 
 from __future__ import annotations
@@ -42,6 +43,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--day-hours", help="дневные часы, например 8,20")
     p.add_argument("--no-map", action="store_true", help="не строить HTML-карту")
     p.add_argument("--open", action="store_true", help="открыть карту в браузере после расчёта")
+    p.add_argument("--tour", action="store_true", help="открыть карту сразу в режиме пошагового тура по ТЗ (для демо)")
     return p.parse_args(argv)
 
 
@@ -102,8 +104,9 @@ def main(argv: list[str] | None = None) -> int:
 
     written = write_outputs(analysis, args.out, make_map=not args.no_map)
     print_summary(analysis, written)
-    if args.open and "map" in written:
-        webbrowser.open(written["map"].resolve().as_uri())
+    page = "tour" if args.tour else "map"
+    if (args.open or args.tour) and page in written:
+        webbrowser.open(written[page].resolve().as_uri())
     return 0
 
 

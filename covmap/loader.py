@@ -61,13 +61,16 @@ def read_table(path: str | Path, required: tuple[str, ...]) -> pd.DataFrame:
             raise DataError(f"{path.name}: нет колонок {missing}, есть {header}")
         positions = [header.index(c) for c in required]
 
-        rows = []
+        rows, lines = [], []
         for raw in reader:
             if not raw or (len(raw) == 1 and not raw[0].strip()):
                 continue  # пустая строка — не данные (так же ведёт себя pandas)
             rows.append([raw[i].strip() if i < len(raw) else "" for i in positions])
+            lines.append(reader.line_num)  # номер строки в файле — для отчёта об отброшенных
 
-    return pd.DataFrame(rows, columns=list(required), dtype=object)
+    df = pd.DataFrame(rows, columns=list(required), dtype=object)
+    df["source_line"] = pd.Series(lines, dtype="int64")
+    return df
 
 
 def read_measurements(path: str | Path) -> pd.DataFrame:

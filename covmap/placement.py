@@ -27,6 +27,7 @@ class PairResult:
     covered: frozenset[str]
     pairs_evaluated: int = 0
     tied_with: list[tuple[str, ...]] = field(default_factory=list)
+    steps: list[tuple[str, int]] = field(default_factory=list)  # жадный: (площадка, прирост) по шагам
 
     @property
     def covered_count(self) -> int:
@@ -83,6 +84,7 @@ def best_pair_bruteforce(coverage: Coverage, k: int = 2) -> PairResult:
 def greedy_pair(coverage: Coverage, k: int = 2) -> PairResult:
     """Жадно: на каждом шаге берём кандидата с наибольшим приростом покрытия."""
     chosen: list[str] = []
+    steps: list[tuple[str, int]] = []
     covered: frozenset[str] = frozenset()
     evaluated = 0
     for _ in range(min(k, len(coverage))):
@@ -95,5 +97,12 @@ def greedy_pair(coverage: Coverage, k: int = 2) -> PairResult:
             if gain > best_gain:
                 best_id, best_gain = cid, gain
         chosen.append(best_id)
+        steps.append((best_id, best_gain))
         covered = covered | coverage[best_id]
-    return PairResult("greedy", tuple(chosen), covered, pairs_evaluated=evaluated)
+    return PairResult("greedy", tuple(chosen), covered, pairs_evaluated=evaluated, steps=steps)
+
+
+def pair_scores(coverage: Coverage, k: int = 2) -> list[tuple[tuple[str, ...], int]]:
+    """Все сочетания площадок с числом закрытых квадратов, от лучшего к худшему (для графика)."""
+    scores = [(combo, len(frozenset().union(*(coverage[i] for i in combo)))) for combo in combinations(coverage, k)]
+    return sorted(scores, key=lambda item: -item[1])  # sorted устойчив: при равенстве — порядок перебора

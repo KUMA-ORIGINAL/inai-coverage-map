@@ -7,14 +7,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geologica:wght@500..700&family=Golos+Text:wght@400..600&family=JetBrains+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>/*__VENDOR_CSS__*/</style>
 <style>
 :root {
   --ink: #13212E; --ink-2: #4A5966; --ink-3: #7F8D9A;
   --paper: #F3F5F6; --card: #FFFFFF; --line: #DCE2E7; --hover: #E8ECEF;
   --good: #1F9D6B; --fair: #E3A90F; --weak: #D6402B;
   --plan: #5B47D6; --plan-soft: #ECE9FC; --muted: #A9B3BC;
-  --f-display: "Geologica", system-ui, sans-serif;
+  --f-display: "Geologica", "Segoe UI", system-ui, sans-serif;
   --f-body: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
   --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
 }
@@ -27,32 +27,48 @@ body {
 }
 .mono { font-family: var(--f-mono); }
 button { font: inherit; color: inherit; }
+a { color: var(--plan); }
 :focus-visible { outline: 2px solid var(--plan); outline-offset: 2px; }
+kbd { font: 500 11px var(--f-mono); padding: 1px 5px; border-radius: 4px; border: 1px solid currentColor; opacity: .7; }
 
 /* ---------- боковая панель ---------- */
 .side { height: 100vh; overflow-y: auto; border-right: 1px solid var(--line); scrollbar-width: thin; }
 .hero { padding: 26px 24px 20px; }
 .eyebrow { margin: 0 0 12px; font: 500 11px/1.3 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
 h1 { margin: 0; font: 650 28px/1.06 var(--f-display); letter-spacing: -.02em; }
-.sub { margin: 12px 0 0; font: 12px/1.5 var(--f-mono); color: var(--ink-2); }
+.sub { margin: 12px 0 16px; font: 12px/1.5 var(--f-mono); color: var(--ink-2); }
+.start {
+  display: inline-flex; align-items: center; gap: 10px; border: 0; border-radius: 10px; cursor: pointer;
+  padding: 11px 16px; background: var(--plan); color: #fff; font-weight: 600; font-size: 14.5px;
+  box-shadow: 0 6px 18px rgba(91,71,214,.35); transition: transform .12s, box-shadow .12s;
+}
+.start:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(91,71,214,.45); }
+.start svg { flex: none; }
+.start kbd { border-color: rgba(255,255,255,.6); }
 .sec { padding: 20px 24px 22px; border-top: 1px solid var(--line); }
 .sec h2 { margin: 0 0 12px; font: 600 11px/1 var(--f-body); letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); }
 .hint { margin: 0 0 10px; font-size: 12.5px; color: var(--ink-3); }
-.chips + .hint { margin: 10px 0 0; }
+
+/* чек-лист ТЗ */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.ck { display: grid; grid-template-columns: 20px 22px 1fr auto; gap: 8px; align-items: center; width: 100%;
+  padding: 7px 8px; border: 0; border-radius: 8px; background: transparent; cursor: pointer; text-align: left; }
+.ck:hover { background: var(--hover); }
+.ck-i { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--good); color: #fff; }
+.ck-n { font: 600 11px var(--f-mono); color: var(--ink-3); }
+.ck-t { font-size: 13.5px; line-height: 1.25; }
+.ck-f { font: 500 12px var(--f-mono); color: var(--ink-2); white-space: nowrap; }
+.ck-bonus .ck-i { background: var(--plan); }
+.ck-sep { margin: 8px 8px 2px; font: 600 10.5px var(--f-body); letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); }
+.ck-sub { margin: -2px 0 4px 58px; font-size: 12px; }
 
 /* шкала RSRP */
 #hist { display: block; width: 100%; height: auto; overflow: visible; }
-#hist text { font: 10px var(--f-mono); fill: var(--ink-2); }
-#hist .bar { transition: opacity .2s; }
-#needle { transition: transform .12s ease-out; }
+#hist text, .chart text { font: 10px var(--f-mono); fill: var(--ink-2); }
 #needle text { font-weight: 600; fill: #fff; }
-
 .chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 12px; }
-.chip {
-  display: grid; grid-template-columns: 10px 1fr; column-gap: 8px; align-items: center;
-  padding: 8px 10px; border-radius: 9px; border: 1px solid var(--line); background: var(--card);
-  cursor: pointer; text-align: left; transition: opacity .15s, background .15s;
-}
+.chip { display: grid; grid-template-columns: 10px 1fr; column-gap: 8px; align-items: center; padding: 8px 10px;
+  border-radius: 9px; border: 1px solid var(--line); background: var(--card); cursor: pointer; text-align: left; transition: opacity .15s; }
 .chip:hover { border-color: var(--ink-3); }
 .chip .sw { width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
 .chip .cc { font: 600 20px/1.1 var(--f-display); }
@@ -60,6 +76,7 @@ h1 { margin: 0; font: 650 28px/1.06 var(--f-display); letter-spacing: -.02em; }
 .chip .cr { grid-column: 1 / 3; font: 10.5px/1.3 var(--f-mono); color: var(--ink-3); white-space: nowrap; }
 .chip[aria-pressed="false"] { opacity: .5; background: transparent; }
 .chip[aria-pressed="false"] .sw { background: transparent; box-shadow: inset 0 0 0 2px var(--c); }
+.chips + .hint { margin: 10px 0 0; }
 
 /* пара площадок */
 .kicker { margin: 0 0 6px; font: 600 12.5px var(--f-body); color: var(--plan); }
@@ -73,10 +90,7 @@ h1 { margin: 0; font: 650 28px/1.06 var(--f-display); letter-spacing: -.02em; }
 .meter-cap { display: flex; justify-content: space-between; margin-top: 6px; font: 12px var(--f-mono); }
 .meter-cap .c { color: var(--plan); } .meter-cap .r { color: var(--weak); }
 .note { margin: 12px 0 0; font-size: 13px; color: var(--ink-2); }
-.btn {
-  margin-top: 12px; border: 0; border-radius: 8px; padding: 8px 12px; cursor: pointer;
-  font-weight: 600; font-size: 13px; color: var(--plan); background: var(--plan-soft);
-}
+.btn { margin-top: 12px; border: 0; border-radius: 8px; padding: 8px 12px; cursor: pointer; font-weight: 600; font-size: 13px; color: var(--plan); background: var(--plan-soft); }
 .btn:hover { background: #DFD9FA; }
 .btn[hidden] { display: none; }
 
@@ -101,23 +115,28 @@ h1 { margin: 0; font: 650 28px/1.06 var(--f-display); letter-spacing: -.02em; }
 
 /* худшие квадраты */
 .worst { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.wrow {
-  display: grid; grid-template-columns: 24px 1fr auto auto; gap: 10px; align-items: center; width: 100%;
-  padding: 8px 10px 8px 8px; border: 0; border-radius: 9px; background: var(--card);
-  box-shadow: 0 0 0 1px var(--line); cursor: pointer; text-align: left; transition: box-shadow .12s;
-}
+.wrow { display: grid; grid-template-columns: 24px 1fr auto auto; gap: 10px; align-items: center; width: 100%;
+  padding: 8px 10px 8px 8px; border: 0; border-radius: 9px; background: var(--card); box-shadow: 0 0 0 1px var(--line); cursor: pointer; text-align: left; }
 .wrow:hover { box-shadow: 0 0 0 1.5px var(--ink); }
 .rank { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: #fff; font: 600 12px var(--f-display); }
 .wv { color: var(--weak); font: 600 13px var(--f-mono); }
 .wc { font-size: 12px; color: var(--ink-3); }
 
-/* алгоритмы и очистка */
-.algo { margin: 0; display: grid; gap: 12px; }
+/* алгоритмы */
+.algo { margin: 0 0 14px; display: grid; gap: 12px; }
 .arow { display: grid; grid-template-columns: 112px 1fr; gap: 12px; }
 .algo dt { color: var(--ink-2); }
 .algo dd { margin: 0; }
 .algo dd small { display: block; font-size: 12px; color: var(--ink-3); }
-.algo + .hint { margin: 12px 0 0; }
+.chart { display: block; width: 100%; height: auto; overflow: visible; }
+.chart-cap { margin: 6px 0 0; font-size: 12px; color: var(--ink-3); }
+.xyz { margin-top: 12px; font-size: 13px; }
+.xyz summary { cursor: pointer; color: var(--plan); font-weight: 600; }
+.xyz table { margin: 8px 0; border-collapse: collapse; font-size: 13px; }
+.xyz td { padding: 3px 10px 3px 0; }
+.xyz p { margin: 0; color: var(--ink-2); }
+
+/* очистка */
 .stack { display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: hidden; margin: 2px 0 12px; }
 .legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
 .legend li { display: grid; grid-template-columns: 10px 1fr auto; gap: 10px; align-items: center; }
@@ -135,20 +154,26 @@ h1 { margin: 0; font: 650 28px/1.06 var(--f-display); letter-spacing: -.02em; }
 
 .mapbar { position: absolute; z-index: 500; top: 14px; left: 14px; right: 14px; display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; pointer-events: none; }
 .mapbar > * { pointer-events: auto; }
-.seg, .toggles { display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: rgba(255,255,255,.97); box-shadow: 0 2px 10px rgba(19,33,46,.16); }
-.seg button, .tog { border: 0; background: transparent; padding: 7px 12px; border-radius: 7px; cursor: pointer; white-space: nowrap; font-weight: 500; font-size: 13px; color: var(--ink-2); }
+.seg, .toggles { display: flex; flex-wrap: wrap; gap: 2px; padding: 3px; border-radius: 10px; background: rgba(255,255,255,.97); box-shadow: 0 2px 10px rgba(19,33,46,.16); }
+.seg button, .tog { border: 0; background: transparent; padding: 7px 11px; border-radius: 7px; cursor: pointer; white-space: nowrap; font-weight: 500; font-size: 13px; color: var(--ink-2); }
 .seg button:hover, .tog:hover { color: var(--ink); background: var(--hover); }
 .seg button[aria-pressed="true"] { background: var(--ink); color: #fff; }
 .tog::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 7px; border-radius: 50%; border: 1.5px solid currentColor; vertical-align: 0; }
 .tog[aria-pressed="true"] { background: var(--plan-soft); color: var(--plan); }
 .tog[aria-pressed="true"]::before { background: currentColor; }
 .tog:disabled { opacity: .4; cursor: not-allowed; }
+.pill { position: absolute; z-index: 500; left: 50%; bottom: 22px; transform: translateX(-50%); padding: 10px 16px; border-radius: 999px;
+  background: var(--ink); color: #fff; font-size: 14px; box-shadow: 0 8px 24px rgba(19,33,46,.3); white-space: nowrap; }
+.pill b { font: 650 16px var(--f-display); color: #C9C0FF; }
+.pill[hidden] { display: none; }
 
 .leaflet-tooltip.tip { background: var(--ink); color: #fff; border: 0; border-radius: 9px; padding: 8px 11px; box-shadow: 0 8px 24px rgba(19,33,46,.28); font: 13px/1.4 var(--f-body); }
 .leaflet-tooltip-top.tip::before { border-top-color: var(--ink); }
 .leaflet-tooltip-bottom.tip::before { border-bottom-color: var(--ink); }
 .leaflet-tooltip-left.tip::before { border-left-color: var(--ink); }
 .leaflet-tooltip-right.tip::before { border-right-color: var(--ink); }
+.leaflet-tooltip.tag { background: #fff; color: var(--ink); border: 0; border-radius: 6px; padding: 3px 7px; box-shadow: 0 2px 8px rgba(19,33,46,.25); font: 600 12px var(--f-mono); }
+.leaflet-tooltip.tag::before { display: none; }
 .tip-id { font: 500 11px var(--f-mono); color: #A9B7C4; }
 .tip-val { display: flex; align-items: center; gap: 7px; font: 600 15px var(--f-mono); }
 .tip-val .dot { width: 9px; height: 9px; border-radius: 2px; }
@@ -161,23 +186,75 @@ h1 { margin: 0; font: 650 28px/1.06 var(--f-display); letter-spacing: -.02em; }
 .cm-ok:hover { transform: scale(1.3); }
 .cm-rej { position: relative; width: 12px; height: 12px; background: #fff; border: 2px solid var(--muted); }
 .cm-rej::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 1.5px; background: var(--muted); transform: translateX(-50%) rotate(45deg); }
+.cm-rej.hot { border-color: var(--weak); } .cm-rej.hot::before { background: var(--weak); }
 .cm-sel { position: relative; width: 22px; height: 22px; background: var(--plan); border: 3px solid #fff; box-shadow: 0 0 0 2px var(--plan), 0 4px 12px rgba(91,71,214,.5); cursor: pointer; }
 .cm-sel b { position: absolute; left: 25px; top: 50%; transform: translateY(-50%); padding: 2px 6px; border-radius: 5px; background: var(--plan); color: #fff; font: 600 12px var(--f-mono); white-space: nowrap; }
+.cm-greedy { position: relative; width: 20px; height: 20px; background: #fff; border: 3px dashed var(--ink); }
+.cm-greedy b { position: absolute; left: 23px; top: 50%; transform: translateY(-50%); padding: 2px 6px; border-radius: 5px; background: var(--ink); color: #fff; font: 600 12px var(--f-mono); white-space: nowrap; }
 .mrank { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--ink); color: #fff; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(19,33,46,.4); font: 600 11px var(--f-display); }
 .tower { filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff); }
+
+/* ---------- тур ---------- */
+.tour { position: absolute; inset: 0; z-index: 900; pointer-events: none; }
+.tour[hidden] { display: none; }
+.tour > * { pointer-events: auto; }
+.tour-exit { position: absolute; top: 16px; left: 16px; border: 0; border-radius: 10px; padding: 9px 14px; cursor: pointer;
+  background: rgba(255,255,255,.97); box-shadow: 0 2px 10px rgba(19,33,46,.18); font-weight: 600; color: var(--ink-2); }
+.tour-exit:hover { color: var(--ink); }
+.tour-card { position: absolute; left: 24px; right: 24px; bottom: 24px; max-width: 1180px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr auto; gap: 8px 32px; align-items: end;
+  padding: 24px 28px 18px; border-radius: 18px; background: rgba(19,33,46,.96); color: #fff; box-shadow: 0 18px 50px rgba(19,33,46,.4); }
+.tour-tag { margin: 0 0 8px; font: 600 12px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: #C9C0FF; }
+.tour-tag.must { color: #8FE0BC; }
+.tour-title { margin: 0; font: 650 clamp(22px, 2.5vw, 38px)/1.1 var(--f-display); letter-spacing: -.02em; }
+.tour-line { margin: 10px 0 0; font-size: clamp(15px, 1.35vw, 20px); line-height: 1.45; color: #D3DBE2; max-width: 62ch; }
+.tour-line b { color: #fff; font-weight: 600; }
+.tour-num { text-align: right; }
+.tour-num b { display: block; font: 650 clamp(40px, 5vw, 76px)/1 var(--f-display); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.tour-num span { display: block; margin-top: 6px; font-size: 14px; color: #A9B7C4; }
+.tour-nav { grid-column: 1 / 3; display: flex; align-items: center; gap: 14px; margin-top: 10px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.12); }
+.tour-nav button.nav { border: 0; border-radius: 9px; padding: 9px 14px; cursor: pointer; font-weight: 600; background: rgba(255,255,255,.1); color: #fff; }
+.tour-nav button.nav:hover { background: rgba(255,255,255,.18); }
+.tour-nav button.nav.primary { background: var(--plan); }
+.tour-nav button.nav.primary:hover { background: #6B58E6; }
+.tour-nav button.nav:disabled { opacity: .35; cursor: default; }
+.tour-dots { flex: 1; display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.tour-dots button { width: 100%; height: 6px; border: 0; padding: 0; border-radius: 3px; cursor: pointer; background: rgba(255,255,255,.18); }
+.tour-dots li { flex: 1; }
+.tour-dots button.done { background: #8FE0BC; }
+.tour-dots button.bonus.done { background: #A99CF5; }
+.tour-dots button.cur { background: #fff; }
+.tour-keys { font-size: 12px; color: #A9B7C4; white-space: nowrap; }
+.tour-side { position: absolute; top: 16px; right: 16px; width: 400px; max-height: calc(100% - 300px); overflow: auto;
+  padding: 18px 20px; border-radius: 14px; background: rgba(255,255,255,.98); box-shadow: 0 10px 30px rgba(19,33,46,.22); }
+.tour-side[hidden] { display: none; }
+.tour-side h3 { margin: 0 0 10px; font: 650 17px var(--f-display); }
+.tour-side .steps { margin: 12px 0 0; font-size: 14px; color: var(--ink-2); }
+.tour-side .steps b { color: var(--ink); }
+.final { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.final li { display: grid; grid-template-columns: 24px 1fr; gap: 10px; align-items: center; font-size: 15px; opacity: 0; transform: translateY(6px); transition: opacity .3s, transform .3s; }
+.final li.in { opacity: 1; transform: none; }
+.final .ck-i { width: 24px; height: 24px; }
+body.touring { grid-template-columns: 1fr; }
+body.touring .side { display: none; }
+body.touring .mapbar, body.touring .pill { display: none; }
 
 /* ---------- телефон ---------- */
 @media (max-width: 820px) {
   body { display: flex; flex-direction: column; height: auto; }
   .stage { order: -1; flex: none; height: 62vh; }
+  body.touring .stage { height: 100vh; }
   .side { height: auto; overflow: visible; border-right: 0; }
   .mapbar { top: 10px; left: 10px; right: 10px; justify-content: flex-start; }
-  .seg button, .tog { padding: 6px 9px; font-size: 12.5px; }
+  .seg button, .tog { padding: 6px 8px; font-size: 12px; }
   .hero { padding: 20px 16px 14px; }
   .sec { padding: 18px 16px 20px; }
   h1 { font-size: 24px; }
+  .tour-card { left: 8px; right: 8px; bottom: 8px; padding: 16px; grid-template-columns: 1fr; }
+  .tour-num { text-align: left; }
+  .tour-keys, .tour-side { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { *, .leaflet-pane { transition: none !important; } }
 </style>
 </head>
 <body>
@@ -186,7 +263,16 @@ h1 { margin: 0; font: 650 28px/1.06 var(--f-display); letter-spacing: -.02em; }
     <p class="eyebrow">ТЗ 7 · Осенний хакатон INAI 2026</p>
     <h1>Где в Бишкеке слабый сигнал</h1>
     <p class="sub" id="sub"></p>
+    <button type="button" class="start" id="start-tour">
+      <svg width="12" height="14" viewBox="0 0 12 14" aria-hidden="true"><path d="M1 1.5v11l10-5.5z" fill="currentColor"/></svg>
+      Показать, как мы считали
+    </button>
   </header>
+
+  <section class="sec" aria-labelledby="h-check">
+    <h2 id="h-check">ТЗ 7 — выполнено</h2>
+    <ul class="checklist" id="checklist"></ul>
+  </section>
 
   <section class="sec" aria-labelledby="h-signal">
     <h2 id="h-signal">Медиана RSRP по квадратам 200 м</h2>
@@ -218,8 +304,11 @@ h1 { margin: 0; font: 650 28px/1.06 var(--f-display); letter-spacing: -.02em; }
   </section>
 
   <section class="sec" aria-labelledby="h-algo">
-    <h2 id="h-algo">Как выбирали пару</h2>
+    <h2 id="h-algo">Жадный алгоритм против перебора</h2>
     <dl class="algo" id="algo"></dl>
+    <svg class="chart" id="pairchart" viewBox="0 0 336 120" role="img" aria-label="Все пары площадок по числу закрытых квадратов"></svg>
+    <p class="chart-cap">Каждый столбик — одна пара площадок, высота — сколько слабых квадратов она закрывает.</p>
+    <div id="xyz-slot"></div>
   </section>
 
   <section class="sec" aria-labelledby="h-clean">
@@ -233,33 +322,57 @@ h1 { margin: 0; font: 650 28px/1.06 var(--f-display); letter-spacing: -.02em; }
 <main class="stage">
   <div id="map" aria-label="Карта покрытия"></div>
   <div class="mapbar">
-    <div class="seg" role="group" aria-label="Время замеров" id="seg">
+    <div class="seg" role="group" aria-label="Что показать на карте" id="seg">
       <button type="button" data-mode="all" aria-pressed="true">Всё время</button>
       <button type="button" data-mode="day" aria-pressed="false">День</button>
       <button type="button" data-mode="night" aria-pressed="false">Ночь</button>
+      <button type="button" data-mode="diff" aria-pressed="false">Разница</button>
     </div>
     <div class="toggles">
+      <button type="button" class="tog" id="t-after" aria-pressed="false">После 2 БС</button>
+      <button type="button" class="tog" id="t-points" aria-pressed="false">Замеры</button>
       <button type="button" class="tog" id="t-heat" aria-pressed="false">Тепловая карта</button>
-      <button type="button" class="tog" id="t-zones" aria-pressed="false">Зоны 500 м у БС</button>
+      <button type="button" class="tog" id="t-zones" aria-pressed="false">Зоны 500 м</button>
+    </div>
+  </div>
+  <div class="pill" id="pill" hidden></div>
+
+  <div class="tour" id="tour" hidden>
+    <button type="button" class="tour-exit" id="tour-exit">✕ Выйти из тура <kbd>Esc</kbd></button>
+    <div class="tour-side" id="tour-side" hidden></div>
+    <div class="tour-card" role="dialog" aria-live="polite" aria-labelledby="tour-title">
+      <div>
+        <p class="tour-tag" id="tour-tag"></p>
+        <h2 class="tour-title" id="tour-title"></h2>
+        <p class="tour-line" id="tour-line"></p>
+      </div>
+      <div class="tour-num"><b id="tour-num"></b><span id="tour-unit"></span></div>
+      <div class="tour-nav">
+        <button type="button" class="nav" id="tour-prev">← Назад</button>
+        <ol class="tour-dots" id="tour-dots"></ol>
+        <span class="tour-keys"><kbd>←</kbd> <kbd>→</kbd> <kbd>Пробел</kbd></span>
+        <button type="button" class="nav primary" id="tour-next">Дальше →</button>
+      </div>
     </div>
   </div>
 </main>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script>/*__VENDOR_JS__*/</script>
 <script>const D = __COVMAP_DATA__;</script>
 <script>
 (function () {
   "use strict";
 
+  // ======================= утилиты =======================
   const COL = { green: "#1F9D6B", yellow: "#E3A90F", red: "#D6402B" };
   const PLAN = "#5B47D6", INK = "#13212E";
   const LABEL = { green: "Хороший сигнал", yellow: "Средний сигнал", red: "Слабый сигнал" };
+  const SHORT = { green: "хороший", yellow: "средний", red: "слабый" };
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const $ = (sel) => document.querySelector(sel);
   const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
   const nf = new Intl.NumberFormat("ru-RU");
-  const minus = (s) => s.replace("-", "−");
+  const minus = (s) => String(s).replace("-", "−");
   const dbm = (v) => minus(v.toFixed(1));
   function plural(n, forms) {
     const a = Math.abs(n) % 100, b = a % 10;
@@ -269,12 +382,16 @@ h1 { margin: 0; font: 650 28px/1.06 var(--f-display); letter-spacing: -.02em; }
     return forms[2];
   }
   const classify = (v) => (v >= D.th.green ? "green" : v < D.th.red ? "red" : "yellow");
+  const CHECK_SVG = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.2l2.3 2.3 4.7-5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-  // ---------- данные ----------
+  // ======================= данные =======================
   const toCell = (a) => ({ id: a[0], s: a[1], w: a[2], n: a[3], e: a[4], median: a[5], count: a[6], cls: a[7] });
   const CELLS = { all: D.cells.all.map(toCell), day: D.cells.day.map(toCell), night: D.cells.night.map(toCell) };
   const cellById = new Map(CELLS.all.map((c) => [c.id, c]));
-  const redTotal = CELLS.all.filter((c) => c.cls === "red").length;
+  const dayById = new Map(CELLS.day.map((c) => [c.id, c]));
+  const DIFF = CELLS.night.filter((c) => dayById.has(c.id)).map((c) => ({ night: c, day: dayById.get(c.id), changed: dayById.get(c.id).cls !== c.cls }));
+  const redCells = CELLS.all.filter((c) => c.cls === "red");
+  const redTotal = redCells.length;
   const candById = new Map(D.candidates.map((c) => [c.id, c]));
   const allowed = D.candidates.filter((c) => c.allowed);
   const rejected = D.candidates.filter((c) => !c.allowed);
@@ -285,37 +402,60 @@ h1 { margin: 0; font: 650 28px/1.06 var(--f-display); letter-spacing: -.02em; }
   }));
   const bestIds = D.best.ids;
   const bestLabel = bestIds.join(" + ");
+  const greedyLabel = D.greedy.ids.join(" + ");
+  const count = (cells, cls) => cells.filter((c) => c.cls === cls).length;
+  const S = {
+    total: D.cleaning.total_rows, dropped: D.cleaning.dropped, kept: D.cleaning.kept,
+    cells: CELLS.all.length, sparse: D.grid.sparse,
+    green: count(CELLS.all, "green"), yellow: count(CELLS.all, "yellow"), red: redTotal,
+    dayRed: count(CELLS.day, "red"), nightRed: count(CELLS.night, "red"),
+    changed: DIFF.filter((d) => d.changed).length,
+    worst: D.worst.map((id) => cellById.get(id)).filter(Boolean),
+  };
+  const cellsBounds = CELLS.all.length
+    ? L.latLngBounds([[Math.min(...CELLS.all.map((c) => c.s)), Math.min(...CELLS.all.map((c) => c.w))],
+                      [Math.max(...CELLS.all.map((c) => c.n)), Math.max(...CELLS.all.map((c) => c.e))]])
+    : null;
 
-  const state = { mode: "all", hidden: new Set(), sel: bestIds.slice(), heat: false, zones: false };
+  const state = { mode: "all", hidden: new Set(), sel: bestIds.slice(), heat: false, zones: false, points: false, after: false };
 
-  // ---------- карта ----------
+  // ======================= карта =======================
   const map = L.map("map", { zoomControl: false });
   L.control.zoom({ position: "bottomright" }).addTo(map);
   L.control.scale({ position: "bottomleft", imperial: false }).addTo(map);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(map);
-  [["cellsPane", 400], ["heatPane", 405], ["radiusPane", 410], ["coveredPane", 420]].forEach(([name, z]) => {
-    map.createPane(name).style.zIndex = z;
-  });
-  map.getPane("heatPane").style.pointerEvents = "none";
-  const cellRenderer = L.canvas({ pane: "cellsPane", padding: 0.5 });
-  const coveredRenderer = L.canvas({ pane: "coveredPane", padding: 0.5 });
+  const PANES = [["cellsPane", 400], ["pointsPane", 404], ["radiusPane", 410], ["coveredPane", 420],
+    ["tCells", 401], ["tGrid", 412], ["tPoints", 414], ["tDrop", 416], ["tOver", 424]];
+  PANES.forEach(([name, z]) => { const p = map.createPane(name); p.style.zIndex = z; });
+  ["tCells", "tGrid", "tPoints", "tDrop", "tOver"].forEach((n) => { map.getPane(n).style.transition = "opacity .8s ease"; });
+  const R = {};
+  PANES.forEach(([name]) => { R[name] = L.canvas({ pane: name, padding: 0.5 }); });
 
-  const cellLayer = L.layerGroup().addTo(map);
-  const radiusLayer = L.layerGroup().addTo(map);
-  const coveredLayer = L.layerGroup().addTo(map);
+  const cellLayer = L.layerGroup();
+  const radiusLayer = L.layerGroup();
+  const coveredLayer = L.layerGroup();
+  const candGroup = L.layerGroup();
+  const worstGroup = L.layerGroup();
+  const normalGroup = L.layerGroup([cellLayer, radiusLayer, coveredLayer, candGroup, worstGroup]).addTo(map);
   const zonesLayer = L.layerGroup();
-  let cellLayers = new Map();
-  let heatLayer = null;
+  const pointsLayer = L.layerGroup();
+  let pointsBuilt = false, heatLayer = null, cellLayers = new Map();
+  const heatData = () => D.points.map((p) => [p[0], p[1], Math.min(1, Math.max(0.05, (-p[2] - 80) / 40))]);
+  const hasHeat = typeof L.heatLayer === "function" && D.points.length > 0;
 
-  // ---------- шкала RSRP (гистограмма) ----------
+  function fitAll(opts) {
+    if (cellsBounds) map.fitBounds(cellsBounds, Object.assign({ padding: [24, 24] }, opts || {}));
+    else map.setView(D.center, 12);
+  }
+
+  // ======================= шкала RSRP =======================
   const hist = $("#hist");
   let hx = null;
+  const modeCells = () => (state.mode === "diff" ? CELLS.night : CELLS[state.mode]);
   function drawHist() {
-    const cells = CELLS[state.mode];
-    const meds = cells.map((c) => c.median);
+    const meds = modeCells().map((c) => c.median);
     const lo = Math.floor(Math.min(D.th.red - 15, ...meds) / 15) * 15;
     const hi = Math.ceil(Math.max(D.th.green + 15, ...meds) / 15) * 15;
     const bin = 3, nb = Math.round((hi - lo) / bin);
@@ -330,17 +470,14 @@ h1 { margin: 0; font: 650 28px/1.06 var(--f-display); letter-spacing: -.02em; }
       if (!c) return;
       const v0 = lo + i * bin, cls = classify(v0 + bin / 2);
       const h = Math.max(2, (c / maxC) * (base - top));
-      const op = state.hidden.has(cls) ? 0.15 : 1;
-      svg += `<rect class="bar" x="${x(v0) + 0.6}" y="${base - h}" width="${x(v0 + bin) - x(v0) - 1.2}" height="${h}" rx="1.5" fill="${COL[cls]}" opacity="${op}"><title>${minus(String(v0))}…${minus(String(v0 + bin))} дБм: ${c}</title></rect>`;
+      svg += `<rect x="${x(v0) + 0.6}" y="${base - h}" width="${x(v0 + bin) - x(v0) - 1.2}" height="${h}" rx="1.5" fill="${COL[cls]}" opacity="${state.hidden.has(cls) ? 0.15 : 1}"><title>${minus(v0)}…${minus(v0 + bin)} дБм: ${c}</title></rect>`;
     });
     [D.th.red, D.th.green].forEach((t) => {
       svg += `<line x1="${x(t)}" x2="${x(t)}" y1="${top - 6}" y2="${base}" stroke="${INK}" stroke-dasharray="2 3"/>`;
-      svg += `<text x="${x(t)}" y="${base + 15}" text-anchor="middle">${minus(String(t))}</text>`;
+      svg += `<text x="${x(t)}" y="${base + 15}" text-anchor="middle">${minus(t)}</text>`;
     });
-    svg += `<text x="0" y="${base + 15}">${minus(String(lo))}</text>`;
-    svg += `<text x="${W}" y="${base + 15}" text-anchor="end">${minus(String(hi))} дБм</text>`;
-    svg += `<g id="needle" style="display:none"><line y1="4" y2="${base}" stroke="${INK}" stroke-width="1.5"/>` +
-      `<rect x="-25" y="-12" width="50" height="16" rx="4" fill="${INK}"/><text y="0" text-anchor="middle"></text></g>`;
+    svg += `<text x="0" y="${base + 15}">${minus(lo)}</text><text x="${W}" y="${base + 15}" text-anchor="end">${minus(hi)} дБм</text>`;
+    svg += `<g id="needle" style="display:none"><line y1="4" y2="${base}" stroke="${INK}" stroke-width="1.5"/><rect x="-25" y="-12" width="50" height="16" rx="4" fill="${INK}"/><text y="0" text-anchor="middle"></text></g>`;
     hist.innerHTML = svg;
   }
   function showNeedle(v) {
@@ -352,19 +489,16 @@ h1 { margin: 0; font: 650 28px/1.06 var(--f-display); letter-spacing: -.02em; }
   }
   function hideNeedle() { const g = $("#needle"); if (g) g.style.display = "none"; }
 
-  // ---------- фильтр классов ----------
   const CLASS_INFO = [
-    ["red", "слабый", `< ${minus(String(D.th.red))}`],
-    ["yellow", "средний", `${minus(String(D.th.red))}…${minus(String(D.th.green))}`],
-    ["green", "хороший", `≥ ${minus(String(D.th.green))}`],
+    ["red", "слабый", `< ${minus(D.th.red)}`],
+    ["yellow", "средний", `${minus(D.th.red)}…${minus(D.th.green)}`],
+    ["green", "хороший", `≥ ${minus(D.th.green)}`],
   ];
   function renderChips() {
-    const cells = CELLS[state.mode];
-    $("#chips").innerHTML = CLASS_INFO.map(([k, name, range]) => {
-      const n = cells.filter((c) => c.cls === k).length;
-      return `<button type="button" class="chip" data-cls="${k}" aria-pressed="${!state.hidden.has(k)}" style="--c:${COL[k]}">` +
-        `<span class="sw"></span><span class="cc">${n}</span><span class="cl">${name}</span><span class="cr">${range}</span></button>`;
-    }).join("");
+    const cells = modeCells();
+    $("#chips").innerHTML = CLASS_INFO.map(([k, name, range]) =>
+      `<button type="button" class="chip" data-cls="${k}" aria-pressed="${!state.hidden.has(k)}" style="--c:${COL[k]}">` +
+      `<span class="sw"></span><span class="cc">${count(cells, k)}</span><span class="cl">${name}</span><span class="cr">${range}</span></button>`).join("");
   }
   $("#chips").addEventListener("click", (e) => {
     const b = e.target.closest(".chip");
@@ -374,7 +508,8 @@ h1 { margin: 0; font: 650 28px/1.06 var(--f-display); letter-spacing: -.02em; }
     renderChips(); drawHist(); buildCells();
   });
 
-  // ---------- квадраты ----------
+  // ======================= квадраты =======================
+  const union = (ids) => new Set((ids || state.sel).flatMap((id) => candById.get(id).covers));
   function cellTip(c) {
     let html = `<div class="tip-id">${esc(c.id)}</div>` +
       `<div class="tip-val"><span class="dot" style="background:${COL[c.cls]}"></span>${dbm(c.median)} дБм</div>` +
@@ -385,36 +520,52 @@ h1 { margin: 0; font: 650 28px/1.06 var(--f-display); letter-spacing: -.02em; }
     }
     return html;
   }
+  function diffTip(d) {
+    return `<div class="tip-id">${esc(d.night.id)}</div>` +
+      `<div class="tip-sub">днём <b>${SHORT[d.day.cls]}</b> ${dbm(d.day.median)} дБм</div>` +
+      `<div class="tip-sub">ночью <b>${SHORT[d.night.cls]}</b> ${dbm(d.night.median)} дБм</div>` +
+      (d.changed ? '<div class="tip-plan">Цвет меняется</div>' : "");
+  }
+  function addRect(c, style, tip) {
+    const r = L.rectangle([[c.s, c.w], [c.n, c.e]], Object.assign({ renderer: R.cellsPane, color: "#fff", weight: 0.7, opacity: 0.9 }, style));
+    r.bindTooltip(tip, { sticky: true, direction: "top", offset: [0, -8], className: "tip" });
+    r.on("mouseover", () => { r.setStyle({ color: INK, weight: 1.8 }); r.bringToFront(); showNeedle(c.median); });
+    r.on("mouseout", () => { r.setStyle({ color: style.color || "#fff", weight: style.weight || 0.7 }); hideNeedle(); });
+    cellLayer.addLayer(r);
+    return r;
+  }
   function buildCells() {
     cellLayer.clearLayers();
     cellLayers = new Map();
-    const fillOpacity = state.heat ? 0.18 : 0.62;
+    const op = state.heat ? 0.18 : 0.62;
+    if (state.mode === "diff") {
+      DIFF.forEach((d) => {
+        if (state.hidden.has(d.night.cls)) return;
+        const style = d.changed
+          ? { fillColor: COL[d.night.cls], fillOpacity: 0.85, color: INK, weight: 1.4 }
+          : { fillColor: "#7F8D9A", fillOpacity: 0.45 };
+        addRect(d.night, style, () => diffTip(d));
+      });
+      return;
+    }
+    const fixed = state.after && state.mode === "all" ? union() : new Set();
     CELLS[state.mode].forEach((c) => {
       if (state.hidden.has(c.cls)) return;
-      const r = L.rectangle([[c.s, c.w], [c.n, c.e]], {
-        renderer: cellRenderer, color: "#fff", weight: 0.7, opacity: 0.9, fillColor: COL[c.cls], fillOpacity,
-      });
-      r.bindTooltip(() => cellTip(c), { sticky: true, direction: "top", offset: [0, -8], className: "tip" });
-      r.on("mouseover", () => { r.setStyle({ color: INK, weight: 1.8 }); r.bringToFront(); showNeedle(c.median); });
-      r.on("mouseout", () => { r.setStyle({ color: "#fff", weight: 0.7 }); hideNeedle(); });
-      cellLayer.addLayer(r);
+      const healed = fixed.has(c.id);
+      const r = addRect(c, { fillColor: healed ? PLAN : COL[c.cls], fillOpacity: healed ? 0.55 : op }, () => cellTip(c));
       cellLayers.set(c.id, r);
     });
   }
 
-  // ---------- БС и площадки ----------
-  const TOWER_SVG = `<svg class="tower" viewBox="0 0 20 24" width="18" height="22" aria-hidden="true">` +
-    `<path d="M10 5 4 23M10 5l6 18M6.6 15.5h6.8" stroke="${INK}" stroke-width="1.9" fill="none" stroke-linecap="round"/>` +
-    `<circle cx="10" cy="4.5" r="2.8" fill="${INK}"/></svg>`;
+  // ======================= БС, площадки, худшие =======================
+  const TOWER_SVG = `<svg class="tower" viewBox="0 0 20 24" width="18" height="22" aria-hidden="true"><path d="M10 5 4 23M10 5l6 18M6.6 15.5h6.8" stroke="${INK}" stroke-width="1.9" fill="none" stroke-linecap="round"/><circle cx="10" cy="4.5" r="2.8" fill="${INK}"/></svg>`;
+  const towerIcon = () => L.divIcon({ className: "", html: TOWER_SVG, iconSize: [18, 22], iconAnchor: [9, 21] });
+  const towerById = new Map(D.towers.map((t) => [t[0], t]));
   D.towers.forEach(([id, lat, lon]) => {
-    L.marker([lat, lon], {
-      icon: L.divIcon({ className: "", html: TOWER_SVG, iconSize: [18, 22], iconAnchor: [9, 21] }),
-      keyboard: false,
-    }).bindTooltip(`<div class="tip-id">Базовая станция</div><div class="tip-val">${esc(id)}</div>`, { direction: "top", offset: [0, -20], className: "tip" })
+    L.marker([lat, lon], { icon: towerIcon(), keyboard: false })
+      .bindTooltip(`<div class="tip-id">Базовая станция</div><div class="tip-val">${esc(id)}</div>`, { direction: "top", offset: [0, -20], className: "tip" })
       .addTo(map);
-    L.circle([lat, lon], {
-      radius: D.exclusion, color: INK, weight: 1, opacity: 0.6, dashArray: "3 5", fillColor: INK, fillOpacity: 0.05, interactive: false,
-    }).addTo(zonesLayer);
+    L.circle([lat, lon], { radius: D.exclusion, color: INK, weight: 1, opacity: 0.6, dashArray: "3 5", fillColor: INK, fillOpacity: 0.05, interactive: false }).addTo(zonesLayer);
   });
 
   function candIcon(c, selected) {
@@ -423,9 +574,7 @@ h1 { margin: 0; font: 650 28px/1.06 var(--f-display); letter-spacing: -.02em; }
     return L.divIcon({ className: "", html: '<span class="cm cm-ok"></span>', iconSize: [14, 14], iconAnchor: [7, 7] });
   }
   function candTip(c) {
-    if (!c.allowed) {
-      return `<div class="tip-id">${esc(c.id)} · нельзя</div><div class="tip-sub">${nf.format(c.dist)} м до БС ${esc(c.nearest)} — нужно не ближе ${D.exclusion} м</div>`;
-    }
+    if (!c.allowed) return `<div class="tip-id">${esc(c.id)} · нельзя</div><div class="tip-sub">${nf.format(c.dist)} м до БС ${esc(c.nearest)} — нужно не ближе ${D.exclusion} м</div>`;
     const picked = state.sel.includes(c.id);
     return `<div class="tip-id">${esc(c.id)}</div><div class="tip-sub">Закрывает ${c.covers.length} ${plural(c.covers.length, ["слабый квадрат", "слабых квадрата", "слабых квадратов"])} в одиночку</div>` +
       `<div class="tip-hint">${picked ? "Нажмите, чтобы убрать из пары" : "Нажмите, чтобы добавить в пару"}</div>`;
@@ -435,51 +584,40 @@ h1 { margin: 0; font: 650 28px/1.06 var(--f-display); letter-spacing: -.02em; }
     const m = L.marker([c.lat, c.lon], { icon: candIcon(c, false), keyboard: false, riseOnHover: true, zIndexOffset: 500 });
     m.bindTooltip(() => candTip(c), { direction: "top", offset: [0, -10], className: "tip" });
     if (c.allowed) m.on("click", () => toggle(c.id));
-    m.addTo(map);
+    candGroup.addLayer(m);
     markers.set(c.id, m);
   });
-
-  D.worst.forEach((id, i) => {
-    const c = cellById.get(id);
-    if (!c) return;
-    L.marker([(c.s + c.n) / 2, (c.w + c.e) / 2], {
-      icon: L.divIcon({ className: "", html: `<span class="mrank">${i + 1}</span>`, iconSize: [22, 22], iconAnchor: [11, 11] }),
-      interactive: false, keyboard: false, zIndexOffset: 400,
-    }).addTo(map);
+  const rankIcon = (i) => L.divIcon({ className: "", html: `<span class="mrank">${i + 1}</span>`, iconSize: [22, 22], iconAnchor: [11, 11] });
+  S.worst.forEach((c, i) => {
+    L.marker([(c.s + c.n) / 2, (c.w + c.e) / 2], { icon: rankIcon(i), interactive: false, keyboard: false, zIndexOffset: 400 }).addTo(worstGroup);
   });
 
-  // ---------- выбор пары ----------
+  // ======================= выбор пары =======================
   function toggle(id) {
     const i = state.sel.indexOf(id);
     if (i >= 0) state.sel.splice(i, 1);
     else { if (state.sel.length === 2) state.sel.shift(); state.sel.push(id); }
     renderSelection();
   }
-  const union = () => new Set(state.sel.flatMap((id) => candById.get(id).covers));
   const isBest = () => state.sel.length === bestIds.length && bestIds.every((id) => state.sel.includes(id));
-
   function renderSelection() {
     radiusLayer.clearLayers();
     coveredLayer.clearLayers();
     state.sel.forEach((id) => {
       const c = candById.get(id);
-      L.circle([c.lat, c.lon], {
-        pane: "radiusPane", radius: D.radius, color: PLAN, weight: 1.6, opacity: 0.9, fillColor: PLAN, fillOpacity: 0.07, interactive: false,
-      }).addTo(radiusLayer);
+      L.circle([c.lat, c.lon], { pane: "radiusPane", radius: D.radius, color: PLAN, weight: 1.6, opacity: 0.9, fillColor: PLAN, fillOpacity: 0.07, interactive: false }).addTo(radiusLayer);
     });
     const cov = union();
     cov.forEach((id) => {
       const c = cellById.get(id);
-      if (c) L.rectangle([[c.s, c.w], [c.n, c.e]], { renderer: coveredRenderer, color: PLAN, weight: 2.4, fill: false, interactive: false }).addTo(coveredLayer);
+      if (c) L.rectangle([[c.s, c.w], [c.n, c.e]], { renderer: R.coveredPane, color: PLAN, weight: 2.4, fill: false, interactive: false }).addTo(coveredLayer);
     });
     markers.forEach((m, id) => m.setIcon(candIcon(candById.get(id), state.sel.includes(id))));
     document.querySelectorAll(".crow").forEach((b) => b.setAttribute("aria-pressed", String(state.sel.includes(b.dataset.id))));
 
     const n = cov.size, best = D.best.covered, best_ = isBest();
     $("#kicker").textContent = best_ ? "Лучшая пара" : "Ваша пара";
-    $("#pair").innerHTML = state.sel.length
-      ? state.sel.map((id) => `<span>${esc(id)}</span>`).join("<em>+</em>")
-      : '<span class="muted">—</span>';
+    $("#pair").innerHTML = state.sel.length ? state.sel.map((id) => `<span>${esc(id)}</span>`).join("<em>+</em>") : '<span class="muted">—</span>';
     const sq = plural(redTotal, ["слабого квадрата", "слабых квадратов", "слабых квадратов"]);
     if (!redTotal) $("#lead").textContent = "Слабых квадратов нет — новые станции не нужны.";
     else if (state.sel.length === 2) $("#lead").innerHTML = `закрывают <b>${n}</b> из ${redTotal} ${sq}`;
@@ -487,7 +625,6 @@ h1 { margin: 0; font: 650 28px/1.06 var(--f-display); letter-spacing: -.02em; }
     else $("#lead").textContent = "Выберите две площадки — в списке или на карте.";
     $("#meter").style.width = redTotal ? `${(n / redTotal) * 100}%` : "0";
     $("#meter-cap").innerHTML = `<span class="c">${n} закрыто</span><span class="r">${redTotal - n} остаются слабыми</span>`;
-
     let note = "";
     if (state.sel.length === 2) {
       if (best_) note = `Это максимум: проверены все ${D.best.pairs} ${plural(D.best.pairs, ["пара", "пары", "пар"])} площадок.`;
@@ -496,23 +633,20 @@ h1 { margin: 0; font: 650 28px/1.06 var(--f-display); letter-spacing: -.02em; }
     }
     $("#note").innerHTML = note;
     $("#reset").hidden = best_ || !bestIds.length;
+    if (state.after) { buildCells(); renderPill(); }
   }
   $("#reset").addEventListener("click", () => { state.sel = bestIds.slice(); renderSelection(); });
 
-  // ---------- список площадок ----------
   function renderCandidates() {
     const ranked = allowed.slice().sort((a, b) => b.covers.length - a.covers.length || a.order - b.order);
     const maxCov = Math.max(1, ...allowed.map((c) => c.covers.length));
     let html = ranked.map((c) =>
-      `<li><button type="button" class="crow" data-id="${esc(c.id)}" aria-pressed="false">` +
-      `<span class="ring" aria-hidden="true"></span><span class="cid mono">${esc(c.id)}</span>` +
-      `<span class="bar-h" aria-hidden="true"><i style="width:${(c.covers.length / maxCov) * 100}%"></i></span>` +
+      `<li><button type="button" class="crow" data-id="${esc(c.id)}" aria-pressed="false"><span class="ring" aria-hidden="true"></span>` +
+      `<span class="cid mono">${esc(c.id)}</span><span class="bar-h" aria-hidden="true"><i style="width:${(c.covers.length / maxCov) * 100}%"></i></span>` +
       `<span class="cn">${c.covers.length}</span></button></li>`).join("");
     if (rejected.length) {
       html += `<li class="divider">Ближе ${D.exclusion} м к существующей БС — не подходят</li>`;
-      html += rejected.map((c) =>
-        `<li class="rej"><span class="ring" aria-hidden="true"></span><span class="cid mono">${esc(c.id)}</span>` +
-        `<span class="why">${nf.format(c.dist)} м до ${esc(c.nearest)}</span></li>`).join("");
+      html += rejected.map((c) => `<li class="rej"><span class="ring" aria-hidden="true"></span><span class="cid mono">${esc(c.id)}</span><span class="why">${nf.format(c.dist)} м до ${esc(c.nearest)}</span></li>`).join("");
     }
     const ul = $("#cands");
     ul.innerHTML = html;
@@ -524,7 +658,6 @@ h1 { margin: 0; font: 650 28px/1.06 var(--f-display); letter-spacing: -.02em; }
     });
   }
 
-  // ---------- худшие квадраты ----------
   function focusCell(id) {
     const c = cellById.get(id);
     if (!c) return;
@@ -538,89 +671,486 @@ h1 { margin: 0; font: 650 28px/1.06 var(--f-display); letter-spacing: -.02em; }
     if (reduceMotion) map.fitBounds(bounds); else map.flyToBounds(bounds, { duration: 0.8 });
   }
   function renderWorst() {
-    $("#worst").innerHTML = D.worst.map((id, i) => {
-      const c = cellById.get(id);
-      return `<li><button type="button" class="wrow" data-id="${esc(id)}"><span class="rank">${i + 1}</span>` +
-        `<span class="mono">${esc(id)}</span><span class="wv">${dbm(c.median)} дБм</span>` +
-        `<span class="wc">${c.count} ${plural(c.count, ["замер", "замера", "замеров"])}</span></button></li>`;
-    }).join("");
+    $("#worst").innerHTML = S.worst.map((c, i) =>
+      `<li><button type="button" class="wrow" data-id="${esc(c.id)}"><span class="rank">${i + 1}</span><span class="mono">${esc(c.id)}</span>` +
+      `<span class="wv">${dbm(c.median)} дБм</span><span class="wc">${c.count} ${plural(c.count, ["замер", "замера", "замеров"])}</span></button></li>`).join("");
     $("#worst").addEventListener("click", (e) => { const b = e.target.closest(".wrow"); if (b) focusCell(b.dataset.id); });
   }
 
-  // ---------- алгоритмы и очистка ----------
+  // ======================= жадный против перебора =======================
+  const samePair = (a, b) => a.length === b.length && a.every((id) => b.includes(id));
+  const greedyIndex = D.pairs.findIndex((p) => samePair([p[0], p[1]], D.greedy.ids));
+  function drawPairChart(svg, W, H) {
+    const P = D.pairs, n = P.length;
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    if (!n) { svg.innerHTML = `<text x="0" y="20">Меньше двух подходящих площадок</text>`; return; }
+    const top = 30, base = H - 18, max = Math.max(1, P[0][2]);
+    const step = W / n, bw = Math.max(1, step - (step > 4 ? 1 : 0.3));
+    let out = `<line x1="0" x2="${W}" y1="${base + 0.5}" y2="${base + 0.5}" stroke="#C9D1D8"/>`;
+    P.forEach((p, i) => {
+      const h = Math.max(1, (p[2] / max) * (base - top));
+      const fill = i === 0 ? PLAN : i === greedyIndex ? INK : "#C3CCD4";
+      out += `<rect x="${i * step}" y="${base - h}" width="${bw}" height="${h}" fill="${fill}"><title>${esc(p[0])} + ${esc(p[1])}: ${p[2]}</title></rect>`;
+    });
+    out += `<text x="0" y="${top - 18}" style="fill:${PLAN};font-weight:600">▼ лучшая ${esc(P[0][0])} + ${esc(P[0][1])} → ${P[0][2]}</text>`;
+    if (greedyIndex > 0) {
+      const gx = greedyIndex * step + bw / 2, gh = (P[greedyIndex][2] / max) * (base - top);
+      out += `<text x="${gx}" y="${base - gh - 6}" text-anchor="middle" style="fill:${INK};font-weight:600">▼ жадный</text>`;
+    } else if (greedyIndex === 0) {
+      out += `<text x="0" y="${top - 5}" style="fill:${INK}">жадный выбрал её же</text>`;
+    }
+    out += `<text x="0" y="${H - 3}">лучшие</text><text x="${W}" y="${H - 3}" text-anchor="end">${n} ${plural(n, ["пара", "пары", "пар"])} · худшие</text>`;
+    svg.innerHTML = out;
+  }
+  const greedySteps = () => D.greedy.steps.map(([id, gain], i) => `шаг ${i + 1}: <b>${esc(id)}</b> +${gain}`).join(" → ");
+  const XYZ = `<table><tr><td class="mono">X</td><td>квадраты 2, 3, 4, 5</td></tr><tr><td class="mono">Y</td><td>квадраты 1, 2, 3</td></tr><tr><td class="mono">Z</td><td>квадраты 4, 5, 6</td></tr></table>` +
+    `<p>Жадный берёт самую «большую» X (4), потом Y или Z добавляет ещё 1 — итого <b>5</b>. Перебор находит Y + Z — <b>6</b>.</p>`;
   function renderAlgo() {
     const g = D.greedy, diff = D.best.covered - g.covered;
     $("#algo").innerHTML =
-      `<div class="arow"><dt>Полный перебор</dt><dd><span class="mono">${esc(bestLabel || "—")}</span> → <b>${D.best.covered}</b>` +
-      `<small>проверено ${D.best.pairs} ${plural(D.best.pairs, ["пара", "пары", "пар"])}, ответ точный</small></dd></div>` +
-      `<div class="arow"><dt>Жадный</dt><dd><span class="mono">${esc(g.ids.join(" + ") || "—")}</span> → <b>${g.covered}</b>` +
-      `<small>${diff > 0 ? `на ${diff} меньше оптимума` : "совпал с перебором"}</small></dd></div>`;
-    if (D.best.ties > 0) {
-      $("#algo").insertAdjacentHTML("afterend",
-        `<p class="hint">Ещё ${D.best.ties} ${plural(D.best.ties, ["пара даёт", "пары дают", "пар дают"])} столько же — выбрана первая по порядку в файле.</p>`);
-    }
+      `<div class="arow"><dt>Полный перебор</dt><dd><span class="mono">${esc(bestLabel || "—")}</span> → <b>${D.best.covered}</b><small>проверено ${D.best.pairs} ${plural(D.best.pairs, ["пара", "пары", "пар"])}, ответ точный</small></dd></div>` +
+      `<div class="arow"><dt>Жадный</dt><dd><span class="mono">${esc(greedyLabel || "—")}</span> → <b>${g.covered}</b><small>${greedySteps()}; ${diff > 0 ? `на ${diff} меньше оптимума` : "совпал с перебором"}</small></dd></div>`;
+    drawPairChart($("#pairchart"), 336, 120);
+    $("#xyz-slot").innerHTML = `<details class="xyz"><summary>Почему не жадный: пример, где он ошибается</summary>${XYZ}</details>` +
+      (D.best.ties > 0 ? `<p class="hint" style="margin-top:10px">Ещё ${D.best.ties} ${plural(D.best.ties, ["пара даёт", "пары дают", "пар дают"])} столько же — выбрана первая по порядку в файле.</p>` : "");
   }
+
+  // ======================= очистка =======================
+  const csvLink = `<a href="${esc(D.files.dropped)}" download>dropped_rows.csv</a>`;
   function renderCleaning() {
     const c = D.cleaning;
-    $("#clean-lead").innerHTML = `Отброшено <b>${nf.format(c.dropped)}</b> из ${nf.format(c.total_rows)} строк, в работе ${nf.format(c.kept)}.`;
+    $("#clean-lead").innerHTML = `Отброшено <b>${nf.format(c.dropped)}</b> из ${nf.format(c.total_rows)} строк, в работе ${nf.format(c.kept)}. Каждая строка с причиной — в ${csvLink}.`;
     const parts = [
       ["Не число или пусто", c.invalid_values, INK],
       ["Дубли", c.duplicates, "#4A5966"],
-      [`RSRP вне ${minus(String(D.th.min))}…${minus(String(D.th.max))}`, c.rsrp_out_of_range, "#8593A0"],
+      [`RSRP вне ${minus(D.th.min)}…${minus(D.th.max)}`, c.rsrp_out_of_range, "#8593A0"],
       ["Вне границ района", c.out_of_bounds, "#C3CCD4"],
     ];
     $("#stack").innerHTML = parts.filter((p) => p[1] > 0).map((p) => `<i style="flex:${p[1]};background:${p[2]}"></i>`).join("");
     $("#clean-legend").innerHTML = parts.map((p) => `<li><i style="background:${p[2]}"></i><span>${p[0]}</span><span class="mono">${p[1]}</span></li>`).join("");
     if (c.bad_timestamp_kept > 0) {
-      $("#clean-legend").insertAdjacentHTML("afterend",
-        `<p class="hint">${c.bad_timestamp_kept} ${plural(c.bad_timestamp_kept, ["строка", "строки", "строк"])} без корректного времени оставлены, но не участвуют в сравнении дня и ночи.</p>`);
+      $("#clean-legend").insertAdjacentHTML("afterend", `<p class="hint">${c.bad_timestamp_kept} ${plural(c.bad_timestamp_kept, ["строка", "строки", "строк"])} без корректного времени оставлены, но не участвуют в сравнении дня и ночи.</p>`);
     }
   }
 
-  // ---------- переключатели над картой ----------
+  // ======================= чек-лист ТЗ =======================
+  const CHECK = [
+    { n: "1", title: "Очистка данных", fig: `−${nf.format(S.dropped)} строк` },
+    { n: "2", title: "Сетка 200×200 м, медиана, ≥ 5 замеров", fig: `${S.cells} кв.` },
+    { n: "3", title: "Цвета: зелёный, жёлтый, красный", fig: `${S.red} слабых` },
+    { n: "4", title: "Топ-3 худших квадрата", fig: S.worst[0] ? `${dbm(S.worst[0].median)} дБм` : "—" },
+    { n: "5", title: "Две площадки: 1 км, без двойного учёта, 500 м до БС", fig: `${D.best.covered} из ${S.red}` },
+    { n: "Б1", bonus: true, title: "Жадный алгоритм против перебора", fig: `${D.best.pairs} пар` },
+    { n: "Б2", bonus: true, title: "Покрытие днём и ночью", fig: `${S.changed} меняют цвет` },
+    { n: "Б3", bonus: true, title: "Тепловая карта", fig: `${nf.format(D.points.length)} точек` },
+  ];
+  function renderChecklist() {
+    let html = "";
+    CHECK.forEach((item, i) => {
+      if (i === 0) html += `<li class="ck-sep">Обязательно · 5 из 5</li>`;
+      if (i === 5) html += `<li class="ck-sep">Бонусы · 3 из 3</li>`;
+      html += `<li><button type="button" class="ck${item.bonus ? " ck-bonus" : ""}" data-step="${i}" title="Показать на карте">` +
+        `<span class="ck-i">${CHECK_SVG}</span><span class="ck-n">${item.n}</span><span class="ck-t">${item.title}</span><span class="ck-f">${item.fig}</span></button></li>`;
+      if (i === 0) html += `<li class="ck-sub">Каждая выброшенная строка с причиной: ${csvLink}</li>`;
+    });
+    $("#checklist").innerHTML = html;
+    $("#checklist").addEventListener("click", (e) => { const b = e.target.closest(".ck"); if (b) startTour(Number(b.dataset.step)); });
+  }
+
+  // ======================= переключатели над картой =======================
   function setMode(mode) {
     state.mode = mode;
     document.querySelectorAll("#seg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
-    buildCells(); drawHist(); renderChips();
+    buildCells(); drawHist(); renderChips(); renderPill();
   }
   const [dayStart, dayEnd] = D.dayHours;
   $('#seg [data-mode="day"]').textContent = `День ${dayStart}–${dayEnd}`;
   $('#seg [data-mode="night"]').textContent = `Ночь ${dayEnd}–${dayStart}`;
   $("#seg").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setMode(b.dataset.mode); });
 
-  const heatBtn = $("#t-heat");
-  if (typeof L.heatLayer !== "function" || !D.heat.length) heatBtn.disabled = true;
-  heatBtn.addEventListener("click", () => {
-    state.heat = !state.heat;
-    heatBtn.setAttribute("aria-pressed", String(state.heat));
-    if (!heatLayer) {
-      heatLayer = L.heatLayer(D.heat, {
-        pane: "heatPane", radius: 16, blur: 22, minOpacity: 0.25, maxZoom: 15,
-        gradient: { 0.2: "#F4D58A", 0.5: "#E3A90F", 0.75: "#D6402B", 1: "#6E1A10" },
-      });
-    }
-    state.heat ? heatLayer.addTo(map) : map.removeLayer(heatLayer);
-    buildCells();
-  });
-  const zonesBtn = $("#t-zones");
-  zonesBtn.addEventListener("click", () => {
-    state.zones = !state.zones;
-    zonesBtn.setAttribute("aria-pressed", String(state.zones));
-    state.zones ? zonesLayer.addTo(map) : map.removeLayer(zonesLayer);
-  });
-
-  // ---------- старт ----------
-  $("#sub").textContent = `${nf.format(D.cleaning.kept)} замеров · ${nf.format(CELLS.all.length)} ${plural(CELLS.all.length, ["квадрат", "квадрата", "квадратов"])} · ${D.towers.length} БС · ${D.candidates.length} площадок`;
-  if (CELLS.all.length) {
-    const s = Math.min(...CELLS.all.map((c) => c.s)), w = Math.min(...CELLS.all.map((c) => c.w));
-    const n = Math.max(...CELLS.all.map((c) => c.n)), e = Math.max(...CELLS.all.map((c) => c.e));
-    map.fitBounds([[s, w], [n, e]], { padding: [24, 24] });
-  } else {
-    map.setView(D.center, 12);
+  function renderPill() {
+    const pill = $("#pill");
+    if (state.mode === "diff") {
+      pill.hidden = false;
+      pill.innerHTML = `Днём слабых <b>${S.dayRed}</b>, ночью <b>${S.nightRed}</b> · цвет меняют <b>${S.changed}</b> из ${DIFF.length} квадратов`;
+    } else if (state.after && state.mode === "all") {
+      const n = union().size;
+      pill.hidden = false;
+      pill.innerHTML = `Слабых зон: <b>${redTotal} → ${redTotal - n}</b> после ${esc(state.sel.join(" + ") || "—")}`;
+    } else pill.hidden = true;
   }
-  renderChips(); drawHist(); buildCells();
+  function bindToggle(id, key, on, off) {
+    const btn = $(id);
+    btn.addEventListener("click", () => {
+      state[key] = !state[key];
+      btn.setAttribute("aria-pressed", String(state[key]));
+      state[key] ? on() : off();
+    });
+    return btn;
+  }
+  function ensureHeat() {
+    if (!heatLayer) heatLayer = L.heatLayer(heatData(), { radius: 16, blur: 22, minOpacity: 0.25, maxZoom: 15,
+      gradient: { 0.2: "#F4D58A", 0.5: "#E3A90F", 0.75: "#D6402B", 1: "#6E1A10" } });
+    return heatLayer;
+  }
+  function buildPoints() {
+    if (pointsBuilt) return;
+    D.points.forEach((p) => L.circleMarker([p[0], p[1]], { renderer: R.pointsPane, radius: 2.2, stroke: false, fillColor: COL[classify(p[2])], fillOpacity: 0.85, interactive: false }).addTo(pointsLayer));
+    pointsBuilt = true;
+  }
+  if (!hasHeat) $("#t-heat").disabled = true;
+  bindToggle("#t-heat", "heat", () => { ensureHeat().addTo(map); buildCells(); }, () => { map.removeLayer(heatLayer); buildCells(); });
+  bindToggle("#t-zones", "zones", () => zonesLayer.addTo(map), () => map.removeLayer(zonesLayer));
+  bindToggle("#t-points", "points", () => { buildPoints(); pointsLayer.addTo(map); }, () => map.removeLayer(pointsLayer));
+  bindToggle("#t-after", "after", () => { if (state.mode !== "all") setMode("all"); buildCells(); renderPill(); }, () => { buildCells(); renderPill(); });
+
+  // ======================= тур =======================
+  const tour = { active: false, i: 0, token: 0 };
+  const tourGroup = L.layerGroup();
+  let tourHeat = null;
+  const TOUR_PANES = ["tCells", "tGrid", "tPoints", "tDrop", "tOver"];
+  function later(ms, fn) {
+    const t = tour.token;
+    setTimeout(() => { if (t === tour.token && tour.active) fn(); }, reduceMotion ? 0 : ms);
+  }
+  function tween(ms, fn, done) {
+    const t = tour.token;
+    if (reduceMotion) { fn(1); if (done) done(); return; }
+    const t0 = performance.now();
+    (function frame(now) {
+      if (t !== tour.token || !tour.active) return;
+      const k = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - k, 3);
+      fn(e);
+      if (k < 1) requestAnimationFrame(frame); else if (done) done();
+    })(t0);
+  }
+  function paneOpacity(name, v, animate) {
+    const p = map.getPane(name);
+    if (!animate || reduceMotion) {
+      p.style.transition = "none"; p.style.opacity = v; void p.offsetWidth; p.style.transition = "opacity .8s ease";
+    } else p.style.opacity = v;
+  }
+  function countUp(to, fmt) {
+    const el = $("#tour-num");
+    tween(1100, (k) => { el.textContent = fmt(Math.round(to * k)); });
+  }
+  function tourFit(side) {
+    if (cellsBounds) map.fitBounds(cellsBounds, { paddingTopLeft: [40, 70], paddingBottomRight: [side ? 440 : 40, 250], animate: !reduceMotion });
+  }
+  // --- строительные блоки сцен ---
+  function tPoints(color) {
+    D.points.forEach((p) => L.circleMarker([p[0], p[1]], { renderer: R.tPoints, radius: 1.9, stroke: false, fillColor: color || COL[classify(p[2])], fillOpacity: 0.6, interactive: false }).addTo(tourGroup));
+  }
+  function tCells(styleFn) {
+    const rects = new Map();
+    CELLS.all.forEach((c) => {
+      const r = L.rectangle([[c.s, c.w], [c.n, c.e]], Object.assign({ renderer: R.tCells, color: "#fff", weight: 0.7, interactive: false }, styleFn(c)));
+      r.addTo(tourGroup); rects.set(c.id, r);
+    });
+    return rects;
+  }
+  const colored = (c) => ({ fillColor: COL[c.cls], fillOpacity: 0.62 });
+  function tGrid() {
+    if (!cellsBounds) return;
+    const g = D.grid, b = cellsBounds;
+    const r0 = Math.floor((b.getSouth() - g.originLat) / g.dlat), r1 = Math.ceil((b.getNorth() - g.originLat) / g.dlat);
+    const c0 = Math.floor((b.getWest() - g.originLon) / g.dlon), c1 = Math.ceil((b.getEast() - g.originLon) / g.dlon);
+    const S0 = g.originLat + r0 * g.dlat, N0 = g.originLat + r1 * g.dlat, W0 = g.originLon + c0 * g.dlon, E0 = g.originLon + c1 * g.dlon;
+    const style = { renderer: R.tGrid, color: INK, weight: 0.6, opacity: 0.45, interactive: false };
+    for (let r = r0; r <= r1; r++) { const la = g.originLat + r * g.dlat; L.polyline([[la, W0], [la, E0]], style).addTo(tourGroup); }
+    for (let c = c0; c <= c1; c++) { const lo = g.originLon + c * g.dlon; L.polyline([[S0, lo], [N0, lo]], style).addTo(tourGroup); }
+  }
+  function tTowers() {
+    D.towers.forEach(([id, lat, lon]) => L.marker([lat, lon], { icon: towerIcon(), interactive: false, keyboard: false }).addTo(tourGroup));
+  }
+  function tCircles(ids, color, dashed, grow) {
+    ids.forEach((id) => {
+      const c = candById.get(id);
+      const circle = L.circle([c.lat, c.lon], { pane: "radiusPane", radius: grow ? 1 : D.radius, color, weight: 2, opacity: 0.95, dashArray: dashed ? "6 6" : null, fillColor: color, fillOpacity: dashed ? 0 : 0.08, interactive: false }).addTo(tourGroup);
+      if (grow) tween(900, (k) => circle.setRadius(Math.max(1, D.radius * k)));
+    });
+  }
+  function tCand(c, kind) {
+    const html = kind === "best" ? `<span class="cm cm-sel"><b>${esc(c.id)}</b></span>`
+      : kind === "greedy" ? `<span class="cm cm-greedy"><b>${esc(c.id)} · жадный</b></span>`
+      : kind === "rej" ? '<span class="cm cm-rej hot"></span>' : '<span class="cm cm-ok"></span>';
+    const size = kind === "best" ? 22 : kind === "greedy" ? 20 : kind === "rej" ? 12 : 14;
+    return L.marker([c.lat, c.lon], { icon: L.divIcon({ className: "", html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] }), interactive: false, keyboard: false, zIndexOffset: 600 }).addTo(tourGroup);
+  }
+  function healCells(rects, ids, stagger) {
+    let k = 0;
+    ids.forEach((id) => {
+      const r = rects.get(id);
+      if (!r) return;
+      later(stagger * k++, () => r.setStyle({ fillColor: PLAN, fillOpacity: 0.7, color: "#fff", weight: 1 }));
+    });
+  }
+  function side(html) {
+    const el = $("#tour-side");
+    el.hidden = !html;
+    el.innerHTML = html || "";
+    return el;
+  }
+
+  const MUST = (k) => `Обязательно · пункт ${k} из 5`;
+  const BONUS = (k) => `Бонус ${k} из 3`;
+  const allowedN = allowed.length;
+  const STEPS = [
+    {
+      tag: MUST(1), must: true, title: "Очистка данных",
+      line: () => `Из ${nf.format(S.total)} строк отброшено <b>${nf.format(S.dropped)}</b>: ${D.cleaning.invalid_values} не числа или пусто, ${D.cleaning.duplicates} дублей, ${D.cleaning.rsrp_out_of_range} с RSRP вне ${minus(D.th.min)}…${minus(D.th.max)}, ${D.cleaning.out_of_bounds} вне района. Каждая — в dropped_rows.csv с номером строки и причиной.`,
+      unit: "строк отброшено",
+      run() {
+        tourFit(false);
+        $("#tour-num").textContent = "−0";
+        tPoints("#5B6B7A");
+        D.dropped.forEach((p) => L.circleMarker([p[0], p[1]], { renderer: R.tDrop, radius: 5, color: "#fff", weight: 1.2, fillColor: COL.red, fillOpacity: 1, interactive: false }).addTo(tourGroup));
+        later(700, () => { countUp(S.dropped, (v) => `−${nf.format(v)}`); later(500, () => paneOpacity("tDrop", 0, true)); });
+      },
+    },
+    {
+      tag: MUST(2), must: true, title: "Сетка квадратов 200×200 м, медиана RSRP",
+      line: () => `${nf.format(S.kept)} замеров разложены по квадратам 200 м, в каждом — медиана. ${nf.format(S.sparse)} ${plural(S.sparse, ["квадрат", "квадрата", "квадратов"])} с менее чем ${D.minCount} замерами не учитываются, остаётся <b>${S.cells}</b>.`,
+      unit: "квадратов в расчёте",
+      run() {
+        tourFit(false);
+        tPoints("#5B6B7A");
+        paneOpacity("tGrid", 0, false); paneOpacity("tCells", 0, false);
+        tGrid();
+        tCells(() => ({ fillColor: "#4A5966", fillOpacity: 0.45 }));
+        later(200, () => paneOpacity("tGrid", 1, true));
+        later(1200, () => { paneOpacity("tCells", 1, true); paneOpacity("tPoints", 0, true); countUp(S.cells, (v) => nf.format(v)); });
+        later(2200, () => paneOpacity("tGrid", 0.35, true));
+      },
+    },
+    {
+      tag: MUST(3), must: true, title: `Цвета: зелёный ≥ ${minus(D.th.green)}, жёлтый ${minus(D.th.red)}…${minus(D.th.green)}, красный < ${minus(D.th.red)}`,
+      line: () => `${S.green} зелёных, ${S.yellow} жёлтых и <b>${S.red} красных</b> квадратов. Красные — слабые зоны, их и будем закрывать.`,
+      unit: "слабых зон",
+      run() {
+        tourFit(false);
+        const rects = tCells(() => ({ fillColor: "#4A5966", fillOpacity: 0.45 }));
+        const order = CELLS.all.slice().sort((a, b) => a.w - b.w);
+        const batch = Math.max(1, Math.ceil(order.length / 24));
+        for (let k = 0; k * batch < order.length; k++) {
+          later(300 + k * 55, () => order.slice(k * batch, (k + 1) * batch).forEach((c) => rects.get(c.id).setStyle(colored(c))));
+        }
+        later(300, () => countUp(S.red, (v) => String(v)));
+      },
+    },
+    {
+      tag: MUST(4), must: true, title: "Топ-3 худших квадрата",
+      line: () => S.worst.map((c, i) => `${i + 1}) <b>${esc(c.id)}</b> ${dbm(c.median)} дБм, ${c.count} ${plural(c.count, ["замер", "замера", "замеров"])}`).join(" · "),
+      unit: "дБм — самый слабый квадрат",
+      run() {
+        const rects = tCells(colored);
+        S.worst.forEach((c, i) => {
+          rects.get(c.id).setStyle({ color: INK, weight: 3 });
+          L.marker([(c.s + c.n) / 2, (c.w + c.e) / 2], { icon: rankIcon(i), interactive: false, keyboard: false, zIndexOffset: 700 }).addTo(tourGroup);
+        });
+        $("#tour-num").textContent = S.worst[0] ? dbm(S.worst[0].median) : "—";
+        if (reduceMotion) { tourFit(false); return; }
+        let k = 0;
+        const next = () => {
+          if (k >= S.worst.length) { tourFit(false); return; }
+          const c = S.worst[k++];
+          map.flyTo([(c.s + c.n) / 2, (c.w + c.e) / 2], 15, { duration: 1.1 });
+          later(1900, next);
+        };
+        later(200, next);
+      },
+    },
+    {
+      tag: MUST(5), must: true, title: `Две площадки: радиус 1 км, без двойного учёта, не ближе ${D.exclusion} м к БС`,
+      line: () => `${rejected.length} из ${D.candidates.length} площадок отсеяны правилом ${D.exclusion} м. Из оставшихся ${allowedN} перебраны все ${D.best.pairs} пар: <b>${esc(bestLabel)}</b> закрывают ${D.best.covered} из ${S.red} слабых квадратов (−${S.red ? Math.round(100 * D.best.covered / S.red) : 0}%).`,
+      unit: "слабых квадратов закрыто",
+      run() {
+        tourFit(false);
+        const rects = tCells((c) => ({ fillColor: COL[c.cls], fillOpacity: c.cls === "red" ? 0.75 : 0.3 }));
+        tTowers();
+        $("#tour-num").textContent = `0/${S.red}`;
+        allowed.forEach((c) => { if (!bestIds.includes(c.id)) tCand(c, "ok"); });
+        rejected.forEach((c) => {
+          const m = tCand(c, "rej");
+          m.bindTooltip(`${esc(c.id)} ✕ ${nf.format(c.dist)} м до ${esc(c.nearest)}`, { permanent: true, direction: "right", offset: [8, 0], className: "tag" });
+          const t = towerById.get(c.nearest);
+          if (t) L.circle([t[1], t[2]], { radius: D.exclusion, color: COL.red, weight: 1.5, dashArray: "4 4", fill: false, interactive: false }).addTo(tourGroup);
+        });
+        later(1500, () => {
+          bestIds.forEach((id) => tCand(candById.get(id), "best"));
+          tCircles(bestIds, PLAN, false, true);
+          const cov = Array.from(union(bestIds));
+          later(700, () => {
+            healCells(rects, cov, 45);
+            tween(cov.length * 45 + 300, (k) => { $("#tour-num").textContent = `${Math.round(D.best.covered * k)}/${S.red}`; });
+          });
+        });
+      },
+    },
+    {
+      tag: BONUS(1), title: "Жадный алгоритм против полного перебора",
+      line: () => D.greedy.covered === D.best.covered
+        ? `Жадный (${greedySteps().replace(/<\/?b>/g, "")}) дал ${D.greedy.covered} — здесь столько же, сколько перебор. Но гарантию даёт только перебор всех ${D.best.pairs} пар: справа пример, где жадный ошибается.`
+        : `Жадный выбрал <b>${esc(greedyLabel)}</b> → ${D.greedy.covered}, перебор нашёл <b>${esc(bestLabel)}</b> → ${D.best.covered}: на ${D.best.covered - D.greedy.covered} больше.`,
+      unit: "пар проверено перебором",
+      side: true,
+      run() {
+        tourFit(true);
+        const fixed = union(bestIds);
+        tCells((c) => ({ fillColor: fixed.has(c.id) ? PLAN : COL[c.cls], fillOpacity: c.cls === "red" ? 0.7 : 0.25 }));
+        tTowers();
+        bestIds.forEach((id) => tCand(candById.get(id), "best"));
+        tCircles(bestIds, PLAN, false, false);
+        if (!samePair(D.greedy.ids, bestIds)) {
+          D.greedy.ids.filter((id) => !bestIds.includes(id)).forEach((id) => tCand(candById.get(id), "greedy"));
+          tCircles(D.greedy.ids, INK, true, false);
+        }
+        countUp(D.best.pairs, (v) => nf.format(v));
+        const el = side(`<h3>Все ${D.best.pairs} пар площадок</h3><svg class="chart" id="tour-chart"></svg>` +
+          `<p class="steps">Жадный: ${greedySteps()} = <b>${D.greedy.covered}</b><br>Перебор: <b>${esc(bestLabel)}</b> = <b>${D.best.covered}</b></p>` +
+          (D.greedy.covered === D.best.covered ? `<h3 style="margin-top:16px">Где жадный ошибается</h3><div class="xyz">${XYZ}</div>` : ""));
+        drawPairChart(el.querySelector("#tour-chart"), 360, 150);
+      },
+    },
+    {
+      tag: BONUS(2), title: "Покрытие днём и ночью",
+      line: () => `Днём (${dayStart}–${dayEnd} ч) слабых квадратов <b>${S.dayRed}</b>, ночью — <b>${S.nightRed}</b>. Цвет меняют ${S.changed} из ${DIFF.length} квадратов — они выделены, остальные серые.`,
+      unit: "квадратов меняют цвет",
+      run() {
+        tourFit(false);
+        DIFF.forEach((d) => {
+          const c = d.night;
+          L.rectangle([[c.s, c.w], [c.n, c.e]], d.changed
+            ? { renderer: R.tCells, fillColor: COL[c.cls], fillOpacity: 0.9, color: INK, weight: 1.6, interactive: false }
+            : { renderer: R.tCells, fillColor: "#7F8D9A", fillOpacity: 0.45, color: "#fff", weight: 0.7, interactive: false }).addTo(tourGroup);
+        });
+        countUp(S.changed, (v) => String(v));
+      },
+    },
+    {
+      tag: BONUS(3), title: "Тепловая карта",
+      line: () => `${nf.format(D.points.length)} замеров, чем слабее сигнал, тем горячее точка. Тёмно-красные пятна совпадают с красными квадратами.`,
+      unit: "замеров на тепловой карте",
+      run() {
+        tourFit(false);
+        tCells((c) => ({ fillColor: COL[c.cls], fillOpacity: 0.15 }));
+        if (hasHeat) {
+          if (!tourHeat) tourHeat = L.heatLayer(heatData(), { radius: 16, blur: 22, minOpacity: 0.3, maxZoom: 15, gradient: { 0.2: "#F4D58A", 0.5: "#E3A90F", 0.75: "#D6402B", 1: "#6E1A10" } });
+          tourHeat.addTo(tourGroup);
+        }
+        countUp(D.points.length, (v) => nf.format(v));
+      },
+    },
+    {
+      tag: "Итог", title: "ТЗ 7 выполнено полностью",
+      line: () => `5 из 5 обязательных пунктов и 3 из 3 бонусов. Ответ для автопроверки — в <b>out/result.json</b>: худшие ${esc(D.worst.join(", "))}, площадки ${esc(bestLabel)}, отброшено ${S.dropped} строк.`,
+      unit: "пунктов ТЗ",
+      side: true,
+      run() {
+        tourFit(true);
+        const fixed = union(bestIds);
+        tCells((c) => ({ fillColor: fixed.has(c.id) ? PLAN : COL[c.cls], fillOpacity: fixed.has(c.id) ? 0.7 : 0.55 }));
+        tTowers();
+        bestIds.forEach((id) => tCand(candById.get(id), "best"));
+        tCircles(bestIds, PLAN, false, false);
+        $("#tour-num").textContent = "8/8";
+        const el = side(`<h3>ТЗ 7 — чек-лист</h3><ul class="final">${CHECK.map((c) =>
+          `<li><span class="ck-i" style="background:${c.bonus ? PLAN : COL.green}">${CHECK_SVG}</span><span>${c.bonus ? "Бонус: " : ""}${c.title} — <b class="mono">${c.fig}</b></span></li>`).join("")}</ul>`);
+        el.querySelectorAll("li").forEach((li, i) => later(150 + i * 140, () => li.classList.add("in")));
+      },
+    },
+  ];
+
+  $("#tour-dots").innerHTML = STEPS.map((s, i) => `<li><button type="button" class="${s.must ? "" : "bonus"}" data-i="${i}" aria-label="Шаг ${i + 1}: ${esc(s.title)}"></button></li>`).join("");
+  function go(i) {
+    tour.i = Math.max(0, Math.min(STEPS.length - 1, i));
+    tour.token++;
+    map.stop();
+    tourGroup.clearLayers();
+    TOUR_PANES.forEach((n) => paneOpacity(n, 1, false));
+    const s = STEPS[tour.i];
+    const tag = $("#tour-tag");
+    tag.textContent = s.tag;
+    tag.className = "tour-tag" + (s.must ? " must" : "");
+    $("#tour-title").textContent = s.title;
+    $("#tour-line").innerHTML = s.line();
+    $("#tour-unit").textContent = s.unit;
+    $("#tour-num").textContent = "";
+    side(null);
+    $("#tour-prev").disabled = tour.i === 0;
+    $("#tour-next").textContent = tour.i === STEPS.length - 1 ? "Готово ✓" : "Дальше →";
+    document.querySelectorAll("#tour-dots button").forEach((b, k) => {
+      b.classList.toggle("cur", k === tour.i);
+      b.classList.toggle("done", k < tour.i);
+    });
+    s.run();
+  }
+  function startTour(i) {
+    tour.active = true;
+    document.body.classList.add("touring");
+    $("#tour").hidden = false;
+    map.removeLayer(normalGroup);
+    [heatLayer, zonesLayer, pointsLayer].forEach((l) => { if (l && map.hasLayer(l)) map.removeLayer(l); });
+    tourGroup.addTo(map);
+    map.invalidateSize();
+    go(i || 0);
+    $("#tour-next").focus();
+    if (location.hash !== "#tour") history.replaceState(null, "", "#tour");
+  }
+  function exitTour() {
+    if (!tour.active) return;
+    tour.active = false;
+    tour.token++;
+    map.stop();
+    tourGroup.clearLayers();
+    map.removeLayer(tourGroup);
+    TOUR_PANES.forEach((n) => paneOpacity(n, 1, false));
+    $("#tour").hidden = true;
+    document.body.classList.remove("touring");
+    normalGroup.addTo(map);
+    if (state.heat) ensureHeat().addTo(map);
+    if (state.zones) zonesLayer.addTo(map);
+    if (state.points) pointsLayer.addTo(map);
+    map.invalidateSize();
+    fitAll();
+    history.replaceState(null, "", location.pathname + location.search);
+    $("#start-tour").focus();
+  }
+  $("#start-tour").addEventListener("click", () => startTour(0));
+  $("#tour-exit").addEventListener("click", exitTour);
+  $("#tour-prev").addEventListener("click", () => go(tour.i - 1));
+  $("#tour-next").addEventListener("click", () => (tour.i === STEPS.length - 1 ? exitTour() : go(tour.i + 1)));
+  $("#tour-dots").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) go(Number(b.dataset.i)); });
+  document.addEventListener("keydown", (e) => {
+    if (!tour.active) return;
+    if (["ArrowRight", "PageDown", " ", "Enter"].includes(e.key)) {
+      // На кнопке Пробел/Enter сработают сами (нативный click) — не листаем дважды.
+      if ((e.key === " " || e.key === "Enter") && e.target.tagName === "BUTTON") return;
+      e.preventDefault();
+      tour.i === STEPS.length - 1 ? exitTour() : go(tour.i + 1);
+    } else if (["ArrowLeft", "PageUp"].includes(e.key)) { e.preventDefault(); go(tour.i - 1); }
+    else if (e.key === "Home") { e.preventDefault(); go(0); }
+    else if (e.key === "Escape") { e.preventDefault(); exitTour(); }
+  });
+  window.addEventListener("hashchange", () => { if (location.hash === "#tour" && !tour.active) startTour(0); });
+
+  // ======================= старт =======================
+  $("#sub").textContent = `${nf.format(S.kept)} замеров · ${nf.format(S.cells)} ${plural(S.cells, ["квадрат", "квадрата", "квадратов"])} · ${D.towers.length} БС · ${D.candidates.length} площадок`;
+  // Карта может открыться в фоновой вкладке или при смене экрана (проектор) с нулевым размером —
+  // подгоняем масштаб, как только у контейнера появится размер.
+  let fitted = false;
+  function initialFit() {
+    const s = map.getSize();
+    if (s.x > 0 && s.y > 0) { fitAll(); fitted = true; }
+  }
+  if ("ResizeObserver" in window) {
+    new ResizeObserver(() => { map.invalidateSize(); if (!fitted) initialFit(); }).observe($("#map"));
+  }
+  initialFit();
+  renderChecklist(); renderChips(); drawHist(); buildCells();
   renderCandidates(); renderWorst(); renderAlgo(); renderCleaning();
   renderSelection();
+  if (location.hash === "#tour") startTour(0);
 })();
 </script>
 </body>
