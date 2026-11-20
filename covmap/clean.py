@@ -1,6 +1,9 @@
-"""Очистка замеров и справочников.
+"""Очистка замеров и справочников — по уточнениям организаторов (CLARIFICATIONS_RU, п. 7).
 
-Порядок шагов: нечисловые/пустые → дубли → RSRP вне диапазона → координаты вне района.
+Порядок: обязательные поля и конечность чисел → timestamp ISO 8601 → RSRP в −140…−44 →
+географические границы (включительно) → дедупликация по четырём нормализованным полям
+(числа как числа, время как момент времени). Пустая физическая строка тоже отброшенная.
+
 Итоговое число отброшенных строк от порядка не зависит (остаются ровно уникальные
 валидные строки), порядок влияет только на разбивку по причинам.
 
@@ -10,8 +13,8 @@
 
 from __future__ import annotations
 
-import warnings
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone, tzinfo
 
 import numpy as np
 import pandas as pd
@@ -19,66 +22,74 @@ import pandas as pd
 from .config import Config
 
 REJECTED_COLUMNS = ["source_line", "reason", "detail", "lat", "lon", "rsrp_dbm", "timestamp"]
+REASONS = ("invalid_values", "invalid_timestamp", "rsrp_out_of_range", "out_of_bounds", "duplicates")
 
 
 @dataclass
 class CleaningReport:
     total_rows: int
     invalid_values: int = 0
-    duplicates: int = 0
+    invalid_timestamp: int = 0
     rsrp_out_of_range: int = 0
     out_of_bounds: int = 0
-    bad_timestamp_kept: int = 0
+    duplicates: int = 0
     # Выброшенные строки: номер строки в файле, код причины, пояснение, исходные значения.
     rejected: pd.DataFrame = field(default_factory=lambda: pd.DataFrame(columns=REJECTED_COLUMNS),
                                    repr=False, compare=False)
 
     @property
     def dropped(self) -> int:
-        return self.invalid_values + self.duplicates + self.rsrp_out_of_range + self.out_of_bounds
+        return sum(getattr(self, r) for r in REASONS)
 
     @property
     def kept(self) -> int:
         return self.total_rows - self.dropped
 
     def as_dict(self) -> dict:
-        return {
-            "total_rows": self.total_rows,
-            "invalid_values": self.invalid_values,
-            "duplicates": self.duplicates,
-            "rsrp_out_of_range": self.rsrp_out_of_range,
-            "out_of_bounds": self.out_of_bounds,
-            "bad_timestamp_kept": self.bad_timestamp_kept,
-            "dropped": self.dropped,
-            "kept": self.kept,
-        }
+        return {"total_rows": self.total_rows, **{r: getattr(self, r) for r in REASONS},
+                "dropped": self.dropped, "kept": self.kept}
 
 
 def to_number(series: pd.Series) -> pd.Series:
-    """Строки → float64. Всё, что не число (или ±inf), становится NaN."""
+    """Строки → float64. Всё, что не число (или ±inf, NaN), становится NaN."""
     values = pd.to_numeric(series.astype(object), errors="coerce").astype("float64")
     return values.where(np.isfinite(values))
 
 
-def to_timestamp(series: pd.Series) -> pd.Series:
-    """Строки → datetime. Нераспознанное — NaT. Часовые пояса отбрасываются (берём местное время)."""
+def local_timezone(name: str) -> tzinfo:
+    """Часовой пояс по имени; если базы поясов нет (Windows без tzdata) — фиксированное смещение."""
+    try:
+        from zoneinfo import ZoneInfo
 
-    def parse_one(value) -> pd.Timestamp:
-        try:
-            ts = pd.Timestamp(value)
-        except (ValueError, TypeError, OverflowError):
-            return pd.NaT
-        if ts is pd.NaT:
-            return pd.NaT
-        return ts.tz_localize(None) if ts.tzinfo is not None else ts
+        return ZoneInfo(name)
+    except Exception:  # noqa: BLE001 — любая проблема с базой поясов
+        fixed = {"Asia/Bishkek": 6}
+        return timezone(timedelta(hours=fixed.get(name, 0)), name)
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        parsed = [parse_one(v) if str(v).strip() else pd.NaT for v in series]
-    return pd.Series(pd.to_datetime(parsed), index=series.index)
+
+def parse_iso_timestamp(value: str, tz: tzinfo) -> pd.Timestamp:
+    """ISO 8601 → местное время без смещения. Неразбираемое — NaT.
+
+    Время со смещением (+06:00, Z) переводится в местный пояс, поэтому один и тот же момент,
+    записанный по-разному, после нормализации совпадает (это важно для дублей).
+    """
+    text = str(value).strip()
+    if not text:
+        return pd.NaT
+    if text.endswith(("Z", "z")):
+        text = text[:-1] + "+00:00"
+    try:
+        dt = datetime.fromisoformat(text)
+    except ValueError:
+        return pd.NaT
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(tz).replace(tzinfo=None)
+    return pd.Timestamp(dt)
 
 
 def _invalid_detail(raw_row: pd.Series, parsed_row: pd.Series) -> str:
+    if not any(str(raw_row[c]).strip() for c in ("lat", "lon", "rsrp_dbm", "timestamp")):
+        return "пустая строка"
     problems = []
     for col in ("lat", "lon", "rsrp_dbm"):
         if pd.isna(parsed_row[col]):
@@ -96,13 +107,14 @@ def _rejected(raw: pd.DataFrame, lines: pd.Series, index, reason: str, details) 
 
 
 def clean_measurements(raw: pd.DataFrame, cfg: Config) -> tuple[pd.DataFrame, CleaningReport]:
-    """Возвращает чистые замеры (lat, lon, rsrp_dbm, timestamp, timestamp_raw) и отчёт."""
+    """Возвращает чистые замеры (lat, lon, rsrp_dbm, timestamp — местное время, timestamp_raw) и отчёт."""
     report = CleaningReport(total_rows=len(raw))
     if "source_line" in raw:
         lines = raw["source_line"].astype(int)
     else:  # данные пришли не из файла (тесты) — нумеруем как строки CSV после заголовка
         lines = pd.Series(np.arange(2, len(raw) + 2), index=raw.index)
 
+    tz = local_timezone(cfg.timezone)
     df = pd.DataFrame(
         {
             "lat": to_number(raw["lat"]),
@@ -114,24 +126,23 @@ def clean_measurements(raw: pd.DataFrame, cfg: Config) -> tuple[pd.DataFrame, Cl
     )
     rejected: list[pd.DataFrame] = []
 
-    # 1. Нечисловые и пустые значения.
+    # 1. Обязательные поля и конечность чисел (пустые, NaN, Infinity, текст).
     valid = df[["lat", "lon", "rsrp_dbm"]].notna().all(axis=1)
     bad = df.index[~valid]
     report.invalid_values = len(bad)
     rejected.append(_rejected(raw, lines, bad, "invalid_values",
                               (_invalid_detail(raw.loc[i], df.loc[i]) for i in bad)))
-    df = df[valid]
+    df = df[valid].copy()
 
-    # 2. Дубли: оставляем первое вхождение, для повторов запоминаем номер исходной строки.
-    subset = ["timestamp_raw" if c == "timestamp" else c for c in cfg.dedup_on]
-    is_dup = df.duplicated(subset=subset, keep="first")
-    if is_dup.any():
-        first = pd.Series(df.index, index=df.index).groupby([df[c] for c in subset], dropna=False).transform("first")
-        dup = df.index[is_dup]
-        rejected.append(_rejected(raw, lines, dup, "duplicates",
-                                  (f"повтор строки {lines[first[i]]}" for i in dup)))
-    report.duplicates = int(is_dup.sum())
-    df = df[~is_dup]
+    # 2. Время в формате ISO 8601.
+    df["timestamp"] = pd.to_datetime(pd.Series([parse_iso_timestamp(v, tz) for v in df["timestamp_raw"]],
+                                               index=df.index, dtype=object))
+    bad_time = df.index[df["timestamp"].isna()]
+    report.invalid_timestamp = len(bad_time)
+    rejected.append(_rejected(raw, lines, bad_time, "invalid_timestamp",
+                              (f"timestamp пусто" if not df.at[i, "timestamp_raw"] else
+                               f"timestamp='{df.at[i, 'timestamp_raw']}' не ISO 8601" for i in bad_time)))
+    df = df[df["timestamp"].notna()]
 
     # 3. RSRP вне допустимого диапазона (границы включительно).
     in_range = df["rsrp_dbm"].between(cfg.rsrp_min, cfg.rsrp_max, inclusive="both")
@@ -141,18 +152,24 @@ def clean_measurements(raw: pd.DataFrame, cfg: Config) -> tuple[pd.DataFrame, Cl
                               (f"RSRP {df.at[i, 'rsrp_dbm']:g} вне [{cfg.rsrp_min:g}; {cfg.rsrp_max:g}]" for i in out)))
     df = df[in_range]
 
-    # 4. Координаты вне границ района.
+    # 4. Координаты вне границ района (границы включительно).
     inside = cfg.bounds.contains(df["lat"], df["lon"])
     outside = df.index[~inside]
     report.out_of_bounds = len(outside)
     rejected.append(_rejected(raw, lines, outside, "out_of_bounds",
                               (f"({df.at[i, 'lat']:g}, {df.at[i, 'lon']:g}) вне района" for i in outside)))
-    df = df[inside].copy()
+    df = df[inside]
 
-    # Битое время не повод выбрасывать замер (в ТЗ такого правила нет), но для
-    # сравнения «день/ночь» такие строки не используются.
-    df["timestamp"] = to_timestamp(df["timestamp_raw"])
-    report.bad_timestamp_kept = int(df["timestamp"].isna().sum())
+    # 5. Дубли по нормализованным полям: оставляем первое вхождение.
+    subset = list(cfg.dedup_on)
+    is_dup = df.duplicated(subset=subset, keep="first")
+    if is_dup.any():
+        first = pd.Series(df.index, index=df.index).groupby([df[c] for c in subset], dropna=False).transform("first")
+        dup = df.index[is_dup]
+        rejected.append(_rejected(raw, lines, dup, "duplicates",
+                                  (f"повтор строки {lines[first[i]]}" for i in dup)))
+    report.duplicates = int(is_dup.sum())
+    df = df[~is_dup]
 
     non_empty = [part for part in rejected if len(part)]
     if non_empty:

@@ -712,7 +712,7 @@ body.touring .mapbar, body.touring .pill { display: none; }
       `<div class="arow"><dt>Жадный</dt><dd><span class="mono">${esc(greedyLabel || "—")}</span> → <b>${g.covered}</b><small>${greedySteps()}; ${diff > 0 ? `на ${diff} меньше оптимума` : "совпал с перебором"}</small></dd></div>`;
     drawPairChart($("#pairchart"), 336, 120);
     $("#xyz-slot").innerHTML = `<details class="xyz"><summary>Почему не жадный: пример, где он ошибается</summary>${XYZ}</details>` +
-      (D.best.ties > 0 ? `<p class="hint" style="margin-top:10px">Ещё ${D.best.ties} ${plural(D.best.ties, ["пара даёт", "пары дают", "пар дают"])} столько же — выбрана первая по порядку в файле.</p>` : "");
+      (D.best.ties > 0 ? `<p class="hint" style="margin-top:10px">Ещё ${D.best.ties} ${plural(D.best.ties, ["пара даёт", "пары дают", "пар дают"])} столько же — выбрана лексикографически минимальная пара ID.</p>` : "");
   }
 
   // ======================= очистка =======================
@@ -721,16 +721,15 @@ body.touring .mapbar, body.touring .pill { display: none; }
     const c = D.cleaning;
     $("#clean-lead").innerHTML = `Отброшено <b>${nf.format(c.dropped)}</b> из ${nf.format(c.total_rows)} строк, в работе ${nf.format(c.kept)}. Каждая строка с причиной — в ${csvLink}.`;
     const parts = [
-      ["Не число или пусто", c.invalid_values, INK],
-      ["Дубли", c.duplicates, "#4A5966"],
-      [`RSRP вне ${minus(D.th.min)}…${minus(D.th.max)}`, c.rsrp_out_of_range, "#8593A0"],
-      ["Вне границ района", c.out_of_bounds, "#C3CCD4"],
+      ["Пусто, не число, NaN, Infinity", c.invalid_values, INK],
+      ["Время не в ISO 8601", c.invalid_timestamp, "#3A4A59"],
+      [`RSRP вне ${minus(D.th.min)}…${minus(D.th.max)}`, c.rsrp_out_of_range, "#6B7A88"],
+      ["Вне границ района", c.out_of_bounds, "#9AA7B3"],
+      ["Дубли (после нормализации)", c.duplicates, "#C3CCD4"],
     ];
     $("#stack").innerHTML = parts.filter((p) => p[1] > 0).map((p) => `<i style="flex:${p[1]};background:${p[2]}"></i>`).join("");
     $("#clean-legend").innerHTML = parts.map((p) => `<li><i style="background:${p[2]}"></i><span>${p[0]}</span><span class="mono">${p[1]}</span></li>`).join("");
-    if (c.bad_timestamp_kept > 0) {
-      $("#clean-legend").insertAdjacentHTML("afterend", `<p class="hint">${c.bad_timestamp_kept} ${plural(c.bad_timestamp_kept, ["строка", "строки", "строк"])} без корректного времени оставлены, но не участвуют в сравнении дня и ночи.</p>`);
-    }
+    $("#clean-legend").insertAdjacentHTML("afterend", `<p class="hint">Порядок проверок как в уточнениях организаторов: поля → время → RSRP → границы → дубли по четырём нормализованным полям.</p>`);
   }
 
   // ======================= чек-лист ТЗ =======================
@@ -898,7 +897,7 @@ body.touring .mapbar, body.touring .pill { display: none; }
   const STEPS = [
     {
       tag: MUST(1), must: true, title: "Очистка данных",
-      line: () => `Из ${nf.format(S.total)} строк отброшено <b>${nf.format(S.dropped)}</b>: ${D.cleaning.invalid_values} не числа или пусто, ${D.cleaning.duplicates} дублей, ${D.cleaning.rsrp_out_of_range} с RSRP вне ${minus(D.th.min)}…${minus(D.th.max)}, ${D.cleaning.out_of_bounds} вне района. Каждая — в dropped_rows.csv с номером строки и причиной.`,
+      line: () => `Из ${nf.format(S.total)} строк отброшено <b>${nf.format(S.dropped)}</b>: ${D.cleaning.invalid_values} пусто или не число, ${D.cleaning.invalid_timestamp} с неверным временем, ${D.cleaning.rsrp_out_of_range} с RSRP вне ${minus(D.th.min)}…${minus(D.th.max)}, ${D.cleaning.out_of_bounds} вне района, ${D.cleaning.duplicates} дублей. Каждая — в dropped_rows.csv с номером строки и причиной.`,
       unit: "строк отброшено",
       run() {
         tourFit(false);

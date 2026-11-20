@@ -16,7 +16,7 @@ def test_cleaning_counts_exact_on_random_garbage(tmp_path, seed):
     expected = generate(tmp_path, seed=seed, total=2000)
     a = analyze(InputPaths.from_dir(tmp_path), Config())
     report = a.report.as_dict()
-    for key in ("invalid_values", "duplicates", "rsrp_out_of_range", "out_of_bounds", "bad_timestamp_kept"):
+    for key in ("invalid_values", "duplicates", "rsrp_out_of_range", "out_of_bounds", "invalid_timestamp"):
         assert report[key] == expected[key], key
     assert build_result(a)["dropped_rows"] == expected["dropped_rows"]
     assert len(a.best.candidates) == 2

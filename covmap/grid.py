@@ -1,8 +1,13 @@
 """Сетка квадратов 200×200 м и агрегация RSRP по квадратам.
 
-Проекция — локальная равнопромежуточная: начало отсчёта в юго-западном углу района,
-по долготе масштаб cos(широты центра района). На районе размером ~20 км
-искажение меньше 0,1%, зато формулу легко проверить руками.
+Формулы ровно как в уточнениях организаторов — локальная равнопромежуточная модель:
+
+    x = R · cos(lat0) · rad(lon − lon0)        y = R · rad(lat − lat0)
+    ix = floor(x / 200)                        iy = floor(y / 200)
+    cell_id = X{ix:03d}_Y{iy:03d}
+
+(lat0, lon0) — начало сетки из bounds.json. Центр клетки (ix+0.5, iy+0.5)·200 переводится
+обратно в широту/долготу. Это не Web Mercator.
 """
 
 from __future__ import annotations
@@ -13,8 +18,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from .config import Bounds, Config
-from .geo import METERS_PER_DEGREE
+from .config import Config
 
 GREEN, YELLOW, RED = "green", "yellow", "red"
 
@@ -23,38 +27,61 @@ GREEN, YELLOW, RED = "green", "yellow", "red"
 class GridSpec:
     origin_lat: float
     origin_lon: float
-    ref_lat: float
     cell_size_m: float
+    radius_m: float
 
     @classmethod
-    def from_bounds(cls, bounds: Bounds, cell_size_m: float) -> "GridSpec":
-        return cls(bounds.lat_min, bounds.lon_min, bounds.center[0], cell_size_m)
+    def from_config(cls, cfg: Config) -> "GridSpec":
+        lat0, lon0 = cfg.origin
+        return cls(lat0, lon0, cfg.cell_size_m, cfg.earth_radius_m)
+
+    @property
+    def _cos0(self) -> float:
+        return math.cos(math.radians(self.origin_lat))
 
     @property
     def dlat(self) -> float:
-        """Размер квадрата по широте, градусы."""
-        return self.cell_size_m / METERS_PER_DEGREE
+        """Размер клетки по широте, градусы."""
+        return math.degrees(self.cell_size_m / self.radius_m)
 
     @property
     def dlon(self) -> float:
-        """Размер квадрата по долготе, градусы."""
-        return self.cell_size_m / (METERS_PER_DEGREE * math.cos(math.radians(self.ref_lat)))
+        """Размер клетки по долготе, градусы."""
+        return math.degrees(self.cell_size_m / (self.radius_m * self._cos0))
+
+    def to_xy(self, lat, lon) -> tuple[np.ndarray, np.ndarray]:
+        """Метры от начала сетки: x — на восток, y — на север."""
+        lat = np.asarray(lat, dtype=float)
+        lon = np.asarray(lon, dtype=float)
+        x = self.radius_m * self._cos0 * np.radians(lon - self.origin_lon)
+        y = self.radius_m * np.radians(lat - self.origin_lat)
+        return x, y
+
+    def to_latlon(self, x, y) -> tuple[np.ndarray, np.ndarray]:
+        """Обратное преобразование метров сетки в широту/долготу."""
+        lat = self.origin_lat + np.degrees(np.asarray(y, dtype=float) / self.radius_m)
+        lon = self.origin_lon + np.degrees(np.asarray(x, dtype=float) / (self.radius_m * self._cos0))
+        return lat, lon
 
     def index(self, lat, lon) -> tuple[np.ndarray, np.ndarray]:
-        """Номер строки (с юга на север) и столбца (с запада на восток) квадрата."""
-        row = np.floor((np.asarray(lat, dtype=float) - self.origin_lat) / self.dlat).astype(int)
-        col = np.floor((np.asarray(lon, dtype=float) - self.origin_lon) / self.dlon).astype(int)
-        return row, col
+        """(iy, ix): номер строки (с юга на север) и столбца (с запада на восток)."""
+        x, y = self.to_xy(lat, lon)
+        return np.floor(y / self.cell_size_m).astype(int), np.floor(x / self.cell_size_m).astype(int)
 
-    def cell_box(self, row, col):
-        """(юг, запад, север, восток) квадрата."""
-        south = self.origin_lat + row * self.dlat
-        west = self.origin_lon + col * self.dlon
-        return south, west, south + self.dlat, west + self.dlon
+    def cell_box(self, iy, ix):
+        """(юг, запад, север, восток) клетки."""
+        s = self.cell_size_m
+        south, west = self.to_latlon(np.asarray(ix) * s, np.asarray(iy) * s)
+        north, east = self.to_latlon((np.asarray(ix) + 1) * s, (np.asarray(iy) + 1) * s)
+        return south, west, north, east
+
+    def cell_center(self, iy, ix):
+        s = self.cell_size_m
+        return self.to_latlon((np.asarray(ix) + 0.5) * s, (np.asarray(iy) + 0.5) * s)
 
 
-def cell_id(row: int, col: int) -> str:
-    return f"r{int(row)}_c{int(col)}"
+def cell_id(iy: int, ix: int) -> str:
+    return f"X{int(ix):03d}_Y{int(iy):03d}"
 
 
 def classify(median: float, cfg: Config) -> str:
@@ -66,7 +93,7 @@ def classify(median: float, cfg: Config) -> str:
 
 
 def aggregate_cells(measurements: pd.DataFrame, spec: GridSpec, cfg: Config) -> pd.DataFrame:
-    """Медиана RSRP по квадратам; квадраты с числом замеров < min_measurements отбрасываются."""
+    """Медиана RSRP по клеткам; клетки с числом замеров < min_measurements отбрасываются."""
     columns = ["cell_id", "row", "col", "median", "count", "south", "west", "north", "east",
                "center_lat", "center_lon", "color"]
     if measurements.empty:
@@ -81,17 +108,16 @@ def aggregate_cells(measurements: pd.DataFrame, spec: GridSpec, cfg: Config) -> 
     )
     cells = grouped[grouped["count"] >= cfg.min_measurements].copy()
 
-    south, west, north, east = spec.cell_box(cells["row"].to_numpy(), cells["col"].to_numpy())
-    cells["south"], cells["west"], cells["north"], cells["east"] = south, west, north, east
-    cells["center_lat"] = (south + north) / 2
-    cells["center_lon"] = (west + east) / 2
-    cells["cell_id"] = [cell_id(r, c) for r, c in zip(cells["row"], cells["col"])]
+    iy, ix = cells["row"].to_numpy(), cells["col"].to_numpy()
+    cells["south"], cells["west"], cells["north"], cells["east"] = spec.cell_box(iy, ix)
+    cells["center_lat"], cells["center_lon"] = spec.cell_center(iy, ix)
+    cells["cell_id"] = [cell_id(r, c) for r, c in zip(iy, ix)]
     cells["color"] = [classify(m, cfg) for m in cells["median"]]
     return cells[columns].sort_values(["row", "col"]).reset_index(drop=True)
 
 
 def sparse_cell_count(measurements: pd.DataFrame, spec: GridSpec, cfg: Config) -> int:
-    """Сколько квадратов отброшено, потому что в них меньше min_measurements замеров."""
+    """Сколько клеток отброшено, потому что в них меньше min_measurements замеров."""
     if measurements.empty:
         return 0
     row, col = spec.index(measurements["lat"], measurements["lon"])
@@ -100,12 +126,12 @@ def sparse_cell_count(measurements: pd.DataFrame, spec: GridSpec, cfg: Config) -
 
 
 def worst_cells(cells: pd.DataFrame, n: int) -> pd.DataFrame:
-    """N квадратов с минимальной медианой. При равенстве — где больше замеров, затем по id."""
-    return cells.sort_values(["median", "count", "cell_id"], ascending=[True, False, True]).head(n)
+    """N клеток с минимальной медианой; при равенстве — по cell_id (как в уточнениях)."""
+    return cells.sort_values(["median", "cell_id"], ascending=[True, True]).head(n)
 
 
 def split_day_night(measurements: pd.DataFrame, cfg: Config) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Делит замеры с распознанным временем на дневные и ночные."""
+    """Делит замеры на дневные и ночные по местному времени."""
     timed = measurements[measurements["timestamp"].notna()]
     hour = timed["timestamp"].dt.hour
     start, end = cfg.day_hours

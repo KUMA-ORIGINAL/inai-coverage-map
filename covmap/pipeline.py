@@ -21,11 +21,14 @@ class InputPaths:
     measurements: Path
     towers: Path
     candidates: Path
+    bounds: Path | None = None  # bounds.json организаторов (границы, сетка, R, часовой пояс)
 
     @classmethod
     def from_dir(cls, data_dir: str | Path) -> "InputPaths":
         data_dir = Path(data_dir)
-        return cls(data_dir / "measurements.csv", data_dir / "towers.csv", data_dir / "candidates.csv")
+        bounds = data_dir / "bounds.json"
+        return cls(data_dir / "measurements.csv", data_dir / "towers.csv", data_dir / "candidates.csv",
+                   bounds if bounds.is_file() else None)
 
 
 @dataclass
@@ -50,17 +53,19 @@ class Analysis:
 
 
 def analyze(paths: InputPaths, cfg: Config) -> Analysis:
+    if paths.bounds is not None:
+        cfg = cfg.with_bounds_file(paths.bounds)
     measurements, report = clean_measurements(read_measurements(paths.measurements), cfg)
     towers, towers_dropped = clean_points(read_points(paths.towers))
     candidates, candidates_dropped = clean_points(read_points(paths.candidates))
 
-    spec = GridSpec.from_bounds(cfg.bounds, cfg.cell_size_m)
+    spec = GridSpec.from_config(cfg)
     cells = aggregate_cells(measurements, spec, cfg)
     red_cells = cells[cells["color"] == RED]
 
     candidates = evaluate_candidates(candidates, towers, cfg)
     allowed = candidates[candidates["allowed"]]
-    coverage = coverage_sets(allowed, red_cells, cfg.coverage_radius_m)
+    coverage = coverage_sets(allowed, red_cells, cfg.coverage_radius_m, cfg.earth_radius_m)
 
     day, night = split_day_night(measurements, cfg)
 
@@ -88,7 +93,7 @@ def analyze(paths: InputPaths, cfg: Config) -> Analysis:
 def build_result(a: Analysis) -> dict:
     """Ровно формат из ТЗ — его сверяет автопроверка."""
     return {
-        "worst_cells": a.worst["cell_id"].tolist(),
+        "worst_cells": [{"cell_id": r.cell_id, "rsrp_median": round(float(r.median), 6)} for r in a.worst.itertuples()],
         "best_candidates": list(a.best.candidates),
         "dropped_rows": a.report.dropped,
         "covered_weak_cells": a.best.covered_count,

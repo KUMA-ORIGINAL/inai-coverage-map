@@ -38,7 +38,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--towers", help="путь к файлу существующих БС")
     p.add_argument("--candidates", help="путь к файлу площадок-кандидатов")
     p.add_argument("--out", default="out", help="куда сохранить result.json и карту (по умолчанию out)")
-    p.add_argument("--bounds", type=Bounds.parse, help="границы района: lat_min,lat_max,lon_min,lon_max")
+    p.add_argument("--bounds-file", help="bounds.json организаторов (по умолчанию ищется в папке данных)")
+    p.add_argument("--bounds", type=Bounds.parse, help="границы района: lat_min,lat_max,lon_min,lon_max (перекрывает bounds.json)")
     p.add_argument("--dedup-on", help="колонки для поиска дублей через запятую (по умолчанию все поля)")
     p.add_argument("--day-hours", help="дневные часы, например 8,20")
     p.add_argument("--no-map", action="store_true", help="не строить HTML-карту")
@@ -47,8 +48,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
-def build_config(args: argparse.Namespace) -> Config:
+def build_config(args: argparse.Namespace, bounds_file: Path | None = None) -> Config:
     cfg = Config()
+    if bounds_file is not None:
+        cfg = cfg.with_bounds_file(bounds_file)
     if args.bounds:
         cfg = replace(cfg, bounds=args.bounds)
     if args.dedup_on:
@@ -65,6 +68,7 @@ def resolve_paths(args: argparse.Namespace) -> InputPaths:
         measurements=Path(args.measurements) if args.measurements else defaults.measurements,
         towers=Path(args.towers) if args.towers else defaults.towers,
         candidates=Path(args.candidates) if args.candidates else defaults.candidates,
+        bounds=Path(args.bounds_file) if args.bounds_file else defaults.bounds,
     )
 
 
@@ -75,9 +79,10 @@ def print_summary(analysis, written: dict[str, Path]) -> None:
     print()
     print(f"Строк в файле замеров: {c['total_rows']}, отброшено {c['dropped']}:")
     print(f"  не число или пусто   {c['invalid_values']}")
-    print(f"  дубли                {c['duplicates']}")
+    print(f"  неверное время       {c['invalid_timestamp']}")
     print(f"  RSRP вне диапазона   {c['rsrp_out_of_range']}")
     print(f"  вне границ района    {c['out_of_bounds']}")
+    print(f"  дубли                {c['duplicates']}")
     print(
         f"Квадратов: {details['grid']['cells']}, слабых {sel['weak_cells_before']}. "
         f"Пара {' + '.join(sel['bruteforce']['candidates'])} закрывает {sel['bruteforce']['covered_weak_cells']} "
@@ -96,8 +101,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     paths = resolve_paths(args)
     try:
-        analysis = analyze(paths, build_config(args))
-    except DataError as exc:
+        cfg = build_config(args, paths.bounds)  # bounds.json, затем флаги командной строки
+        analysis = analyze(replace(paths, bounds=None), cfg)
+    except (DataError, ValueError, KeyError) as exc:
         print(f"Ошибка входных данных: {exc}", file=sys.stderr)
         print("Укажите папку с данными: python main.py путь/к/папке", file=sys.stderr)
         return 2

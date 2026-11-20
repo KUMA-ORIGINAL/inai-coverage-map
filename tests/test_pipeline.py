@@ -28,7 +28,7 @@ def test_end_to_end_result_format(sample, tmp_path):
     assert (tmp_path / "coverage_map.html").stat().st_size > 10_000
 
     details = json.loads((tmp_path / "details.json").read_text(encoding="utf-8"))
-    for key in ("duplicates", "rsrp_out_of_range", "out_of_bounds", "invalid_values", "bad_timestamp_kept"):
+    for key in ("duplicates", "rsrp_out_of_range", "out_of_bounds", "invalid_values", "invalid_timestamp"):
         assert details["cleaning"][key] == expected[key], key
     rejected = {r["id"] for r in details["candidates"]["rejected_near_tower"]}
     assert not rejected & set(result["best_candidates"])

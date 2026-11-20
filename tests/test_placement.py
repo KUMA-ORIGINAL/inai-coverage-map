@@ -41,7 +41,7 @@ def test_bruteforce_counts_union_without_double_counting():
     cov = {"A": frozenset({1, 2, 3}), "B": frozenset({2, 3, 4}), "C": frozenset({5})}
     best = best_pair_bruteforce(cov)
     assert best.covered_count == 4  # A+B = {1,2,3,4}; A+C тоже 4
-    assert best.candidates == ("A", "B")  # при равенстве — первая пара по порядку
+    assert best.candidates == ("A", "B")  # при равенстве — лексикографически минимальная пара
     assert ("A", "C") in best.tied_with
     assert best.pairs_evaluated == 3
 
@@ -61,3 +61,11 @@ def test_greedy_can_be_suboptimal():
 def test_fewer_than_two_candidates(cov, expected):
     assert best_pair_bruteforce(cov).candidates == expected
     assert greedy_pair(cov).candidates == expected
+
+
+def test_tie_break_is_lexicographic_not_file_order():
+    # Уточнения: при равенстве — лексикографически минимальная отсортированная пара ID.
+    cov = {"C09": frozenset({1}), "C14": frozenset({2}), "C02": frozenset({3}), "C05": frozenset({4})}
+    best = best_pair_bruteforce(cov)
+    assert best.candidates == ("C02", "C05")
+    assert best.covered_count == 2

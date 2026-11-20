@@ -17,6 +17,7 @@ from pathlib import Path
 
 import numpy as np
 
+from .config import BISHKEK_BOUNDS
 from .geo import METERS_PER_DEGREE, distance_matrix_m
 
 TOWERS = [
@@ -72,9 +73,9 @@ def generate(out_dir: str | Path, seed: int = 42, total: int = 5000) -> dict:
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    n_dup, n_range, n_bounds, n_invalid = 80, 40, 30, 30
-    n_edge, n_bad_time = 6, 5
-    n_valid = total - n_dup - n_range - n_bounds - n_invalid - n_edge - n_bad_time
+    n_dup, n_dup_fmt, n_range, n_bounds, n_invalid, n_blank = 70, 10, 40, 30, 30, 2
+    n_edge, n_bad_time = 6, 8
+    n_valid = total - n_dup - n_dup_fmt - n_range - n_bounds - n_invalid - n_blank - n_edge - n_bad_time
 
     # Замеры кластерами (маршруты/дворы), чтобы в квадратах набиралось >= 5 замеров.
     clusters = 140
@@ -92,7 +93,7 @@ def generate(out_dir: str | Path, seed: int = 42, total: int = 5000) -> dict:
     rsrp = _signal(lat, lon) + c_shadow[which] + rng.normal(0, 4, n_valid) + np.where(night, 3.0, 0.0)
     rsrp = np.clip(rsrp, -139.9, -44.1)
 
-    fmt = "%Y-%m-%d %H:%M:%S"
+    fmt = "%Y-%m-%dT%H:%M:%S+06:00"  # ISO 8601 с местным смещением, как у организаторов
     valid_rows = [[f"{a:.6f}", f"{b:.6f}", f"{r:.1f}", t.strftime(fmt)] for a, b, r, t in zip(lat, lon, rsrp, times)]
     ts = start.strftime(fmt)
     mid_lat, mid_lon = (AREA[0] + AREA[1]) / 2, (AREA[2] + AREA[3]) / 2
@@ -102,7 +103,8 @@ def generate(out_dir: str | Path, seed: int = 42, total: int = 5000) -> dict:
 
     # Пограничные значения диапазона — валидны и должны остаться.
     edge_rows = [[*near_center(i), "-140" if i % 2 else "-44", ts] for i in range(n_edge)]
-    bad_time_rows = [[*near_center(100 + i), "-95.5", "not-a-date"] for i in range(n_bad_time)]
+    bad_times = ["not-a-date", "", "2026-13-01T10:00:00", "32.11.2026 10:00"]
+    bad_time_rows = [[*near_center(100 + i), "-95.5", bad_times[i % len(bad_times)]] for i in range(n_bad_time)]
 
     garbage = []
     out_of_range = ["-150", "-141", "-43", "-30", "0", "15", "-200", "-140.5"]
@@ -118,9 +120,15 @@ def generate(out_dir: str | Path, seed: int = 42, total: int = 5000) -> dict:
     ]
     garbage += [bad_values[i % len(bad_values)] for i in range(n_invalid)]
 
-    dup_rows = [list(valid_rows[i]) for i in rng.choice(n_valid, n_dup, replace=False)]
+    picks = rng.choice(n_valid, n_dup + n_dup_fmt, replace=False)
+    dup_rows = [list(valid_rows[i]) for i in picks[:n_dup]]
+    # Те же замеры, записанные иначе: больше знаков после точки и время в UTC (Z).
+    # После нормализации («числа как числа», время как момент) это тоже дубли.
+    dup_rows += [[f"{lat[i]:.6f}0", f"{lon[i]:.6f}0", f"{float(valid_rows[i][2]):.2f}",
+                  (times[i] - timedelta(hours=6)).strftime("%Y-%m-%dT%H:%M:%SZ")] for i in picks[n_dup:]]
+    blank_rows = [[] for _ in range(n_blank)]  # пустые физические строки — тоже отброшенные
 
-    rows = valid_rows + edge_rows + bad_time_rows + garbage + dup_rows
+    rows = valid_rows + edge_rows + bad_time_rows + garbage + dup_rows + blank_rows
     rows = [rows[i] for i in rng.permutation(len(rows))]
 
     with (out_dir / "measurements.csv").open("w", encoding="utf-8", newline="") as fh:
@@ -138,13 +146,18 @@ def generate(out_dir: str | Path, seed: int = 42, total: int = 5000) -> dict:
 
     expected = {
         "total_rows": len(rows),
-        "dropped_rows": n_dup + n_range + n_bounds + n_invalid,
-        "duplicates": n_dup,
+        "dropped_rows": n_dup + n_dup_fmt + n_range + n_bounds + n_invalid + n_blank + n_bad_time,
+        "invalid_values": n_invalid + n_blank,
+        "invalid_timestamp": n_bad_time,
         "rsrp_out_of_range": n_range,
         "out_of_bounds": n_bounds,
-        "invalid_values": n_invalid,
-        "bad_timestamp_kept": n_bad_time,
+        "duplicates": n_dup + n_dup_fmt,
     }
+    b = BISHKEK_BOUNDS
+    bounds = {"lat_min": b.lat_min, "lat_max": b.lat_max, "lon_min": b.lon_min, "lon_max": b.lon_max,
+              "grid_origin_lat": b.lat_min, "grid_origin_lon": b.lon_min, "cell_size_m": 200,
+              "earth_radius_m": 6371000, "timezone": "Asia/Bishkek"}
+    (out_dir / "bounds.json").write_text(json.dumps(bounds, indent=2), encoding="utf-8")
     (out_dir / "expected.json").write_text(json.dumps(expected, indent=2), encoding="utf-8")
     return expected
 

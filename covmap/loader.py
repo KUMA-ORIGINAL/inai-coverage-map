@@ -64,7 +64,7 @@ def read_table(path: str | Path, required: tuple[str, ...]) -> pd.DataFrame:
         rows, lines = [], []
         for raw in reader:
             if not raw or (len(raw) == 1 and not raw[0].strip()):
-                continue  # пустая строка — не данные (так же ведёт себя pandas)
+                raw = []  # пустая физическая строка — по уточнениям она тоже считается отброшенной
             rows.append([raw[i].strip() if i < len(raw) else "" for i in positions])
             lines.append(reader.line_num)  # номер строки в файле — для отчёта об отброшенных
 
