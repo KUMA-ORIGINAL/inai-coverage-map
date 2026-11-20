@@ -13,6 +13,7 @@ from .config import Config
 from .grid import RED, GridSpec, aggregate_cells, split_day_night, worst_cells
 from .loader import read_measurements, read_points
 from .placement import PairResult, best_pair_bruteforce, coverage_sets, evaluate_candidates, greedy_pair
+from .viz import render_map_html
 
 
 @dataclass(frozen=True)
@@ -159,11 +160,10 @@ def write_outputs(a: Analysis, out_dir: str | Path, make_map: bool = True) -> di
         "result": out_dir / "result.json",
         "details": out_dir / "details.json",
     }
+    details = build_details(a)
     written["result"].write_text(json.dumps(build_result(a), ensure_ascii=False, indent=2), encoding="utf-8")
-    written["details"].write_text(json.dumps(build_details(a), ensure_ascii=False, indent=2), encoding="utf-8")
+    written["details"].write_text(json.dumps(details, ensure_ascii=False, indent=2), encoding="utf-8")
     if make_map:
-        from .viz import build_map  # folium нужен только для карты
-
         written["map"] = out_dir / "coverage_map.html"
-        build_map(a, build_details(a)).save(str(written["map"]))
+        written["map"].write_text(render_map_html(a, details), encoding="utf-8")
     return written
